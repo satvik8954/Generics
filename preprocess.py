@@ -1,81 +1,43 @@
 """
-preprocess.py — Prepares Data/f3.csv for the ExciPick model.
+preprocess.py -- Prepares Data/f3.csv for the ExciPick model.
+
+Requires: Run `python compute_features.py` ONCE first to generate Data/api_features.csv.
 
 Pipeline:
-  1. Load raw CSV
-  2. Parse inactive_ingredients → excipient names
-  3. Parse api_smiles_map → SMILES → 20 molecular descriptors
-  4. Normalize dose_mg (log + z-score)
+  1. Load raw CSV + precomputed API features
+  2. Parse inactive_ingredients -> excipient names
+  3. Merge API features (20 molecular descriptors)
+  4. Normalize dose_mg (log + z-score) and descriptors (z-score)
   5. Encode per_unit, route, dosage_form as integer IDs
   6. Build excipient vocabulary (freq >= 3)
   7. Save processed DataFrame + vocab mappings as pickle
 """
 
+import os
 import pandas as pd
 import numpy as np
 import json
 import pickle
 from collections import Counter
 
-from rdkit import Chem
-from rdkit.Chem import Descriptors
-
-# ─────────────────────────────────────────────
+# -----------------------------------------------
 # CONFIG
-# ─────────────────────────────────────────────
+# -----------------------------------------------
 INPUT_PATH = "Data/f3.csv"
+FEATURES_PATH = "Data/api_features.csv"
 OUTPUT_PATH = "processed_data.pkl"
 
 MIN_EXCIPIENTS = 2
 MAX_EXCIPIENTS = 30
 EXCIPIENT_MIN_FREQ = 3
 
-
-# ─────────────────────────────────────────────
-# 20 MOLECULAR DESCRIPTORS (matches api_in=20)
-# ─────────────────────────────────────────────
-DESCRIPTOR_FUNCS = [
-    ("MolWt", Descriptors.MolWt),
-    ("MolLogP", Descriptors.MolLogP),
-    ("TPSA", Descriptors.TPSA),
-    ("NumHDonors", Descriptors.NumHDonors),
-    ("NumHAcceptors", Descriptors.NumHAcceptors),
-    ("NumRotatableBonds", Descriptors.NumRotatableBonds),
-    ("NumAromaticRings", Descriptors.NumAromaticRings),
-    ("NumAliphaticRings", Descriptors.NumAliphaticRings),
-    ("RingCount", Descriptors.RingCount),
-    ("FractionCSP3", Descriptors.FractionCSP3),
-    ("HeavyAtomCount", Descriptors.HeavyAtomCount),
-    ("NumValenceElectrons", Descriptors.NumValenceElectrons),
-    ("MolMR", Descriptors.MolMR),
-    ("LabuteASA", Descriptors.LabuteASA),
-    ("BalabanJ", Descriptors.BalabanJ),
-    ("BertzCT", Descriptors.BertzCT),
-    ("HallKierAlpha", Descriptors.HallKierAlpha),
-    ("NumSaturatedRings", Descriptors.NumSaturatedRings),
-    ("NumHeteroatoms", Descriptors.NumHeteroatoms),
-    ("NHOHCount", Descriptors.NHOHCount),
+DESCRIPTOR_NAMES = [
+    "MolWt", "MolLogP", "TPSA", "NumHDonors", "NumHAcceptors",
+    "NumRotatableBonds", "NumAromaticRings", "NumAliphaticRings",
+    "RingCount", "FractionCSP3", "HeavyAtomCount", "NumValenceElectrons",
+    "MolMR", "LabuteASA", "BalabanJ", "BertzCT", "HallKierAlpha",
+    "NumSaturatedRings", "NumHeteroatoms", "NHOHCount",
 ]
-
-assert len(DESCRIPTOR_FUNCS) == 20, f"Expected 20 descriptors, got {len(DESCRIPTOR_FUNCS)}"
-
-
-def compute_descriptors(smiles):
-    """Compute 20 molecular descriptors from a SMILES string. Returns None on failure."""
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
-        return None
-
-    desc = []
-    for name, func in DESCRIPTOR_FUNCS:
-        try:
-            val = func(mol)
-            if val is None or np.isinf(val) or np.isnan(val):
-                val = 0.0
-            desc.append(float(val))
-        except Exception:
-            desc.append(0.0)
-    return desc
 
 
 def parse_excipient_names(json_str):
@@ -97,17 +59,24 @@ def extract_smiles(json_str):
         return None
 
 
-# ─────────────────────────────────────────────
+# -----------------------------------------------
 # MAIN PREPROCESSING
-# ─────────────────────────────────────────────
+# -----------------------------------------------
 def main():
     print("=" * 50)
     print("ExciPick Preprocessing")
     print("=" * 50)
 
-    # 1. Load
+    # Check that features CSV exists
+    if not os.path.exists(FEATURES_PATH):
+        print(f"\n[ERROR] {FEATURES_PATH} not found!")
+        print("        Run `python compute_features.py` first to generate it.")
+        return
+
+    # 1. Load raw data + precomputed features
     df = pd.read_csv(INPUT_PATH)
-    print(f"\n[1] Loaded: {df.shape[0]} rows, {df.shape[1]} columns")
+    features_df = pd.read_csv(FEATURES_PATH)
+    print(f"\n[1] Loaded: {len(df)} rows, {len(features_df)} API feature vectors")
 
     # 2. Parse excipients
     df["excipient_list"] = df["inactive_ingredients"].apply(parse_excipient_names)
@@ -120,17 +89,20 @@ def main():
     df = df[df["excipient_list"].apply(len) <= MAX_EXCIPIENTS]
     print(f"[3] After excipient count filter ({MIN_EXCIPIENTS}-{MAX_EXCIPIENTS}): {len(df)} rows")
 
-    # 4. Extract SMILES and compute molecular descriptors
-    df["smiles"] = df["api_smiles_map"].apply(extract_smiles)
-    no_smiles = df["smiles"].isna().sum()
-    print(f"[4] Rows missing SMILES: {no_smiles}")
-    df = df[df["smiles"].notna()]
+    # 4. Merge precomputed API features
+    df = df.merge(features_df, on="api_unii", how="left")
 
-    print("    Computing 20 molecular descriptors...")
-    df["api_descriptors"] = df["smiles"].apply(compute_descriptors)
-    bad_desc = df["api_descriptors"].isna().sum()
-    print(f"    Failed descriptor computation: {bad_desc}")
-    df = df[df["api_descriptors"].notna()]
+    # features_df has a 'smiles' column; if df already has one from raw data, merge renames it
+    if "smiles_y" in df.columns:
+        df["smiles"] = df["smiles_y"].fillna(df.get("smiles_x"))
+        df.drop(columns=["smiles_x", "smiles_y"], inplace=True)
+
+    missing_features = df[DESCRIPTOR_NAMES[0]].isna().sum()
+    print(f"[4] Merged API features. Rows missing features: {missing_features}")
+    df = df.dropna(subset=[DESCRIPTOR_NAMES[0]])
+
+    # Pack descriptor columns into a single list column
+    df["api_descriptors"] = df[DESCRIPTOR_NAMES].values.tolist()
 
     # 5. Normalize dose_mg (log + z-score)
     df["log_dose_mg"] = np.log10(df["dose_mg"].clip(lower=1e-9) + 1e-9)
