@@ -1,0 +1,82 @@
+import pandas as pd
+import numpy as np
+from rdkit import Chem, DataStructs
+from rdkit.Chem import AllChem
+from sklearn.model_selection import GroupShuffleSplit
+
+def get_morgan_fp(smiles):
+    """Generates 2048-bit Morgan Fingerprint (radius 2) per Section 7.4."""
+    mol = Chem.MolFromSmiles(smiles)
+    if mol:
+        return AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=2048)
+    return None
+
+def assign_clusters(df, threshold=0.6):
+    """
+    Groups APIs by chemical similarity to prevent leakage[cite: 265, 268].
+    """
+    # 1. Extract unique APIs and their SMILES
+    apis = df[['unii', 'smiles']].drop_duplicates().dropna(subset=['smiles']).reset_index(drop=True)
+    apis['fp'] = apis['smiles'].apply(get_morgan_fp)
+    
+    # 2. Build adjacency list for APIs with Tanimoto similarity >= 0.6
+    num_apis = len(apis)
+    adj = {i: [] for i in range(num_apis)}
+    fps = apis['fp'].tolist()
+
+    for i in range(num_apis):
+        for j in range(i + 1, num_apis):
+            if fps[i] and fps[j]:
+                sim = DataStructs.TanimotoSimilarity(fps[i], fps[j])
+                if sim >= threshold:
+                    adj[i].append(j)
+                    adj[j].append(i)
+
+    # 3. Use Connected Components to assign Cluster IDs
+    cluster_ids = np.full(num_apis, -1)
+    curr_cluster = 0
+    for i in range(num_apis):
+        if cluster_ids[i] == -1:
+            stack = [i]
+            while stack:
+                node = stack.pop()
+                if cluster_ids[node] == -1:
+                    cluster_ids[node] = curr_cluster
+                    stack.extend(adj[node])
+            curr_cluster += 1
+    
+    apis['cluster_id'] = cluster_ids
+    return df.merge(apis[['unii', 'cluster_id']], on='unii', how='left')
+
+def split_by_api_cluster(df, seed=42):
+    """
+    Performs 80/10/10 split by cluster_id.
+    """
+    # Ensure every row has a cluster_id
+    df = assign_clusters(df)
+    
+    # Fill remaining (no SMILES) with their raw UNII as a fallback cluster
+    df['cluster_id'] = df['cluster_id'].fillna(df['unii'])
+
+    # --- Train (80%) vs Temp (20%) ---
+    gss1 = GroupShuffleSplit(n_splits=1, train_size=0.8, random_state=seed)
+    train_idx, temp_idx = next(gss1.split(df, groups=df['cluster_id']))
+    
+    train_df = df.iloc[train_idx].reset_index(drop=True)
+    temp_df = df.iloc[temp_idx].reset_index(drop=True)
+
+    # --- Val (10%) vs Test (10%) ---
+    gss2 = GroupShuffleSplit(n_splits=1, train_size=0.5, random_state=seed)
+    val_idx, test_idx = next(gss2.split(temp_df, groups=temp_df['cluster_id']))
+    
+    val_df = temp_df.iloc[val_idx].reset_index(drop=True)
+    test_df = temp_df.iloc[test_idx].reset_index(drop=True)
+
+    return train_df, val_df, test_df
+
+# Entry point for Week 1 Deliverable [cite: 385]
+if __name__ == "__main__":
+    # raw_data = pd.read_json("path_to_clean_subset.json")
+    # train, val, test = split_by_api_cluster(raw_data)
+    # print(f"Train: {len(train)}, Val: {len(val)}, Test: {len(test)}")
+    pass
