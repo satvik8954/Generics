@@ -55,16 +55,22 @@ def main():
     val_dataset = ExciDataset(val_df, vocab_size)
     test_dataset = ExciDataset(test_df, vocab_size)
 
+    use_cuda = torch.cuda.is_available()
+
     train_loader = DataLoader(
         train_dataset,
         batch_size=CONFIG["batch_size"],
         shuffle=True,
+        pin_memory=use_cuda,
+        num_workers=0,
     )
 
     val_loader = DataLoader(
         val_dataset,
         batch_size=CONFIG["batch_size"],
         shuffle=False,
+        pin_memory=use_cuda,
+        num_workers=0,
     )
 
     # ─────────────────────────────────────────
