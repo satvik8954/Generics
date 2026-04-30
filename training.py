@@ -1,12 +1,11 @@
 """
-training.py — Full training pipeline for ExciPick.
+training.py — Full training pipeline for ExciPick HetGNN.
 
 Pipeline:
-  1. Load preprocessed data (from preprocess.py)
-  2. Split into train/val/test (from split.py)
-  3. Create DataLoaders
-  4. Train with validation loop
-  5. Save best model
+  1. Load preprocessed data + heterogeneous graph + split
+  2. Create DataLoaders
+  3. Train with GNN-aware forward pass + validation loop
+  4. Save best model
 """
 
 import pickle
@@ -15,8 +14,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 
 from dataset import ExciDataset
-from model.FULL_MODEL import ExciPickModel
-from split import split_by_api_cluster
+from model.FULL_MODEL import ExciPickHGNN
 from config import CONFIG
 
 
@@ -28,32 +26,42 @@ def main():
     np.random.seed(CONFIG["seed"])
 
     # ─────────────────────────────────────────
-    # LOAD PREPROCESSED DATA
+    # LOAD DATA
     # ─────────────────────────────────────────
     print("Loading preprocessed data...")
     with open("processed_data.pkl", "rb") as f:
         data = pickle.load(f)
 
-    df = data["df"]
     excipient_vocab = data["excipient_vocab"]
     vocab_size = len(excipient_vocab)
 
-    print(f"  Dataset: {len(df)} rows")
+    print("Loading split data...")
+    with open("split_data.pkl", "rb") as f:
+        split_data = pickle.load(f)
+
+    train_df = split_data["train_df"]
+    val_df = split_data["val_df"]
+    test_df = split_data["test_df"]
+
+    print(f"  Dataset splits — Train: {len(train_df)}, Val: {len(val_df)}, Test: {len(test_df)}")
     print(f"  Excipient vocab: {vocab_size}")
 
     # ─────────────────────────────────────────
-    # TRAIN / VAL / TEST SPLIT
+    # LOAD GRAPH + API MAPPING
     # ─────────────────────────────────────────
-    print("\nSplitting data...")
-    train_df, val_df, test_df = split_by_api_cluster(df, seed=CONFIG["seed"])
-    print(f"  Train: {len(train_df)}, Val: {len(val_df)}, Test: {len(test_df)}")
+    print("\nLoading heterogeneous graph...")
+    graph = torch.load("hetero_graph.pt")
+    print(f"  API nodes: {graph['api'].num_nodes}")
+    print(f"  Excipient nodes: {graph['excipient'].num_nodes}")
+
+    with open("api_node_mapping.pkl", "rb") as f:
+        api_node_mapping = pickle.load(f)
 
     # ─────────────────────────────────────────
     # DATASETS + DATALOADERS
     # ─────────────────────────────────────────
-    train_dataset = ExciDataset(train_df, vocab_size)
-    val_dataset = ExciDataset(val_df, vocab_size)
-    test_dataset = ExciDataset(test_df, vocab_size)
+    train_dataset = ExciDataset(train_df, vocab_size, api_node_mapping)
+    val_dataset = ExciDataset(val_df, vocab_size, api_node_mapping)
 
     use_cuda = torch.cuda.is_available()
 
@@ -79,7 +87,13 @@ def main():
     device = CONFIG["device"] if torch.cuda.is_available() else "cpu"
     print(f"\nUsing device: {device}")
 
-    model = ExciPickModel(vocab_size=vocab_size).to(device)
+    # Move graph to device
+    graph = graph.to(device)
+
+    model = ExciPickHGNN(
+        graph_metadata=graph.metadata(),
+        vocab_size=vocab_size,
+    ).to(device)
 
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Model parameters: {total_params:,}")
@@ -89,7 +103,18 @@ def main():
         lr=CONFIG["lr"],
     )
 
-    loss_fn = torch.nn.BCEWithLogitsLoss()
+    # Cosine annealing LR scheduler
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=CONFIG["epochs"]
+    )
+
+    # Class imbalance: compute pos_weight from training data
+    avg_positives = train_df["excipient_ids"].apply(len).mean()
+    pw = (vocab_size - avg_positives) / avg_positives
+    pos_weight = torch.tensor([pw], device=device)
+    print(f"  pos_weight: {pw:.1f} (avg {avg_positives:.1f} positives per sample out of {vocab_size})")
+
+    loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     # ─────────────────────────────────────────
     # TRAINING LOOP
@@ -105,7 +130,7 @@ def main():
         train_batches = 0
 
         for batch in train_loader:
-            api = batch["api"].to(device)
+            api_idx = batch["api_idx"].to(device)
             dose = batch["dose"].to(device)
             per_unit = batch["per_unit"].to(device)
             route = batch["route"].to(device)
@@ -113,7 +138,7 @@ def main():
             target = batch["target"].to(device)
 
             optimizer.zero_grad()
-            output = model(api, dose, per_unit, route, form)
+            output = model(graph, api_idx, dose, per_unit, route, form)
             loss = loss_fn(output, target)
             loss.backward()
             optimizer.step()
@@ -130,14 +155,14 @@ def main():
 
         with torch.no_grad():
             for batch in val_loader:
-                api = batch["api"].to(device)
+                api_idx = batch["api_idx"].to(device)
                 dose = batch["dose"].to(device)
                 per_unit = batch["per_unit"].to(device)
                 route = batch["route"].to(device)
                 form = batch["form"].to(device)
                 target = batch["target"].to(device)
 
-                output = model(api, dose, per_unit, route, form)
+                output = model(graph, api_idx, dose, per_unit, route, form)
                 loss = loss_fn(output, target)
 
                 val_loss += loss.item()
@@ -145,10 +170,15 @@ def main():
 
         avg_val_loss = val_loss / val_batches
 
+        # Step LR scheduler
+        scheduler.step()
+        current_lr = scheduler.get_last_lr()[0]
+
         # --- Logging ---
         print(f"Epoch {epoch+1:3d}/{CONFIG['epochs']}  "
               f"Train Loss: {avg_train_loss:.4f}  "
-              f"Val Loss: {avg_val_loss:.4f}", end="")
+              f"Val Loss: {avg_val_loss:.4f}  "
+              f"LR: {current_lr:.6f}", end="")
 
         # --- Save best model ---
         if avg_val_loss < best_val_loss:

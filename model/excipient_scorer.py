@@ -1,35 +1,45 @@
+"""
+excipient_scorer.py — Scores each excipient against a formulation context.
+
+In the HetGNN version, excipient embeddings come from the GNN encoder
+(enriched via message passing), not from a local nn.Embedding.
+"""
+
 import torch
 import torch.nn as nn
 from config import CONFIG
 
 
 class Scorer(nn.Module):
-    def __init__(self, vocab_size):
+    def __init__(self):
         super().__init__()
 
-        self.excipient_emb = nn.Embedding(
-            vocab_size,
-            CONFIG["excipient_emb"]
-        )
-
-        input_dim = CONFIG["context_out"] + CONFIG["excipient_emb"]
+        input_dim = CONFIG["context_out"] + CONFIG["gnn_hidden"]
 
         self.net = nn.Sequential(
             nn.Linear(input_dim, CONFIG["scorer_hidden"]),
             nn.ReLU(),
-            nn.Linear(CONFIG["scorer_hidden"], 1)
+            nn.Dropout(CONFIG["dropout_scorer"]),
+            nn.Linear(CONFIG["scorer_hidden"], 1),
         )
 
-    def forward(self, context):
+    def forward(self, context, exc_embs):
+        """
+        Args:
+            context:  (B, context_out) — fused formulation context
+            exc_embs: (V, gnn_hidden)  — GNN-enriched excipient embeddings
+
+        Returns:
+            scores: (B, V) — one logit per excipient
+        """
         B = context.shape[0]
-        V = self.excipient_emb.num_embeddings
+        V = exc_embs.shape[0]
 
-        exc_emb = self.excipient_emb.weight  # (V, emb_dim)
+        # Tile context and excipient embeddings for pairwise scoring
+        context_exp = context.unsqueeze(1).expand(-1, V, -1)   # (B, V, context_out)
+        exc_exp = exc_embs.unsqueeze(0).expand(B, -1, -1)      # (B, V, gnn_hidden)
 
-        context = context.unsqueeze(1).repeat(1, V, 1)
-        exc_emb = exc_emb.unsqueeze(0).repeat(B, 1, 1)
-
-        x = torch.cat([context, exc_emb], dim=2)
-        scores = self.net(x).squeeze(-1)
+        x = torch.cat([context_exp, exc_exp], dim=2)            # (B, V, input_dim)
+        scores = self.net(x).squeeze(-1)                        # (B, V)
 
         return scores
