@@ -12,6 +12,7 @@ import pickle
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from dataset import ExciDataset
 from model.FULL_MODEL import ExciPickHGNN
@@ -50,7 +51,7 @@ def main():
     # LOAD GRAPH + API MAPPING
     # ─────────────────────────────────────────
     print("\nLoading heterogeneous graph...")
-    graph = torch.load("hetero_graph.pt")
+    graph = torch.load("hetero_graph.pt", weights_only=False)
     print(f"  API nodes: {graph['api'].num_nodes}")
     print(f"  Excipient nodes: {graph['excipient'].num_nodes}")
 
@@ -95,6 +96,13 @@ def main():
         vocab_size=vocab_size,
     ).to(device)
 
+    # Dummy forward pass to initialize lazy SAGEConv parameters
+    with torch.no_grad():
+        dummy_idx = torch.zeros(1, dtype=torch.long, device=device)
+        dummy_dose = torch.zeros(1, device=device)
+        dummy_cat = torch.zeros(1, dtype=torch.long, device=device)
+        model(graph, dummy_idx, dummy_dose, dummy_cat, dummy_cat, dummy_cat)
+
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Model parameters: {total_params:,}")
 
@@ -129,7 +137,7 @@ def main():
         train_loss = 0
         train_batches = 0
 
-        for batch in train_loader:
+        for batch in tqdm(train_loader, desc=f"Epoch {epoch+1}/{CONFIG['epochs']} [Train]", leave=False):
             api_idx = batch["api_idx"].to(device)
             dose = batch["dose"].to(device)
             per_unit = batch["per_unit"].to(device)
@@ -154,7 +162,7 @@ def main():
         val_batches = 0
 
         with torch.no_grad():
-            for batch in val_loader:
+            for batch in tqdm(val_loader, desc=f"Epoch {epoch+1}/{CONFIG['epochs']} [Val]", leave=False):
                 api_idx = batch["api_idx"].to(device)
                 dose = batch["dose"].to(device)
                 per_unit = batch["per_unit"].to(device)

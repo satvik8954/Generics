@@ -84,7 +84,7 @@ def run_evaluation():
 
     # Load graph
     device = CONFIG["device"] if torch.cuda.is_available() else "cpu"
-    graph = torch.load("hetero_graph.pt", map_location=device)
+    graph = torch.load("hetero_graph.pt", map_location=device, weights_only=False)
     graph = graph.to(device)
 
     # Load model

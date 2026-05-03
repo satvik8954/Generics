@@ -108,7 +108,7 @@ if __name__ == "__main__":
     print(f"Using device: {device}")
 
     try:
-        graph = torch.load("hetero_graph.pt", map_location=device)
+        graph = torch.load("hetero_graph.pt", map_location=device, weights_only=False)
         graph = graph.to(device)
     except FileNotFoundError:
         print("Error: hetero_graph.pt not found. Run build_graph.py first.")
