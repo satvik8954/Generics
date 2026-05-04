@@ -32,7 +32,7 @@ CONFIG = {
     "gnn_layers": 2,
     "gnn_dropout": 0.2,
     "jaccard_threshold": 0.1,
-    "similarity_threshold": 0.4,
+    "similarity_threshold": 0.6,
 
     # ========================
     # REGULARIZATION
@@ -46,9 +46,9 @@ CONFIG = {
     # TRAINING
     # ========================
 
-    "lr": 1e-4,
+    "lr": 5e-4,
     "batch_size": 64,
-    "epochs": 30,
+    "epochs": 50,
 
     # ========================
     # INFERENCE
