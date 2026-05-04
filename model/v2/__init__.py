@@ -27,6 +27,19 @@ Step 6: INTERACTION MODELING (interaction_modeling.py)
   - GatedInteraction: Learned gating for selective scoring
   - InteractionHead: Ensemble of multiple interaction types
   - InteractionModule: Complete pipeline combining all approaches
+
+Step 8: STAGE 2 SEARCH - BEAM SEARCH (beam_search.py)
+  - ExcipientCombinationScorer: Learns pairwise excipient interaction scoring
+  - BeamSearchCombinationGenerator: Beam search for promising combinations
+  - SearchStage2: Complete beam search pipeline
+  - GFlowNetSearchPlaceholder: For future GFlowNet integration
+
+Step 9: BUNDLE MODEL - SET TRANSFORMER (set_transformer_bundle.py)
+  - SetAttention: Permutation-invariant attention for set encoding
+  - SetAttentionBlock: Complete attention + feed-forward block
+  - SetTransformer: Stack of set attention blocks
+  - SetTransformerBundleModel: Full bundle scoring pipeline
+  - BundleModelStage9: Stage 9 wrapper
 """
 
 from .smiles_graph import smiles_to_graph, get_atom_features, get_bond_features
@@ -43,6 +56,19 @@ from .interaction_modeling import (
     InteractionModule
 )
 from .siamese import SiameseNetwork, ContrastiveLoss
+from .beam_search import (
+    ExcipientCombinationScorer,
+    BeamSearchCombinationGenerator,
+    SearchStage2,
+    GFlowNetSearchPlaceholder
+)
+from .set_transformer_bundle import (
+    SetAttention,
+    SetAttentionBlock,
+    SetTransformer,
+    SetTransformerBundleModel,
+    BundleModelStage9
+)
 
 __all__ = [
     # Step 1: Input
@@ -72,9 +98,22 @@ __all__ = [
     "MultiHeadInteraction",
     "GatedInteraction",
     "InteractionHead",
-    "InteractionModule"
-    ,
+    "InteractionModule",
+    
     # Step 7: Siamese
     "SiameseNetwork",
-    "ContrastiveLoss"
+    "ContrastiveLoss",
+    
+    # Step 8: Beam Search
+    "ExcipientCombinationScorer",
+    "BeamSearchCombinationGenerator",
+    "SearchStage2",
+    "GFlowNetSearchPlaceholder",
+    
+    # Step 9: Set Transformer Bundle Model
+    "SetAttention",
+    "SetAttentionBlock",
+    "SetTransformer",
+    "SetTransformerBundleModel",
+    "BundleModelStage9"
 ]
