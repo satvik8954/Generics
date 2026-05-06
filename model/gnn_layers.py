@@ -46,18 +46,25 @@ class HeteroGNNEncoder(nn.Module):
             })
             self.norms.append(norm_dict)
 
-    def forward(self, x_dict, edge_index_dict):
+    def forward(self, x_dict, edge_index_dict, edge_weight_dict=None):
         """
         Args:
             x_dict: {node_type: (num_nodes, hidden_dim)} node features
             edge_index_dict: {edge_type: (2, num_edges)} edge indices
+            edge_weight_dict: {edge_type: (num_edges,)} optional edge weights
 
         Returns:
             x_dict: enriched node embeddings, same structure as input
         """
         for conv, norm_dict in zip(self.convs, self.norms):
-            # Message passing
-            x_dict_new = conv(x_dict, edge_index_dict)
+            # Build kwargs for edge weights if provided
+            kwargs = {}
+            if edge_weight_dict is not None:
+                for edge_type, weight in edge_weight_dict.items():
+                    kwargs[edge_type] = {"edge_weight": weight}
+
+            # Message passing (with optional edge weights)
+            x_dict_new = conv(x_dict, edge_index_dict, **kwargs)
 
             # Residual + LayerNorm + ReLU + Dropout
             x_dict = {

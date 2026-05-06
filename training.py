@@ -15,28 +15,53 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import torch.nn.functional as F
 
-class FocalLoss(torch.nn.Module):
-    def __init__(self, alpha=0.25, gamma=2.0, reduction="mean"):
+class BPRLoss(torch.nn.Module):
+    """
+    Bayesian Personalized Ranking Loss for multi-label recommendation.
+
+    For each sample, samples negative excipients and optimizes the model
+    so that positive excipients score higher than negatives.
+    Directly optimizes ranking quality (aligned with Precision/Recall/Jaccard@K).
+    """
+    def __init__(self, num_neg_samples=10):
         super().__init__()
-        self.alpha = alpha
-        self.gamma = gamma
-        self.reduction = reduction
+        self.num_neg_samples = num_neg_samples
 
     def forward(self, inputs, targets):
-        p = torch.sigmoid(inputs)
-        ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
-        p_t = p * targets + (1 - p) * (1 - targets)
-        loss = ce_loss * ((1 - p_t) ** self.gamma)
+        """
+        Args:
+            inputs:  (B, V) raw logits
+            targets: (B, V) multi-hot binary targets
+        """
+        B, V = inputs.shape
+        device = inputs.device
 
-        if self.alpha >= 0:
-            alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
-            loss = alpha_t * loss
+        total_loss = 0.0
+        count = 0
 
-        if self.reduction == "mean":
-            return loss.mean()
-        elif self.reduction == "sum":
-            return loss.sum()
-        return loss
+        for i in range(B):
+            pos_idx = targets[i].nonzero(as_tuple=True)[0]  # indices of true excipients
+            neg_idx = (targets[i] == 0).nonzero(as_tuple=True)[0]  # indices of false excipients
+
+            if len(pos_idx) == 0 or len(neg_idx) == 0:
+                continue
+
+            # Sample negatives
+            n_neg = min(self.num_neg_samples, len(neg_idx))
+            neg_sample = neg_idx[torch.randint(0, len(neg_idx), (len(pos_idx) * n_neg,), device=device)]
+
+            # Get scores
+            pos_scores = inputs[i, pos_idx]  # (num_pos,)
+            pos_scores = pos_scores.repeat_interleave(n_neg)  # (num_pos * n_neg,)
+            neg_scores = inputs[i, neg_sample]  # (num_pos * n_neg,)
+
+            # BPR: log sigmoid(pos - neg)
+            total_loss += -F.logsigmoid(pos_scores - neg_scores).mean()
+            count += 1
+
+        if count == 0:
+            return torch.tensor(0.0, device=device, requires_grad=True)
+        return total_loss / count
 
 from dataset import ExciDataset
 from model.FULL_MODEL import ExciPickHGNN
@@ -140,17 +165,18 @@ def main():
         optimizer, T_max=CONFIG["epochs"]
     )
 
-    # Class imbalance is handled dynamically by Focal Loss
-    # We no longer need the extreme pos_weight approach
-    print("  Using Focal Loss (alpha=0.25, gamma=2.0) instead of standard BCE.")
+    # BPR Loss: pairwise ranking loss that directly optimizes top-K quality
+    print("  Using BPR Loss (num_neg_samples=10)")
 
-    loss_fn = FocalLoss(alpha=0.25, gamma=2.0)
+    loss_fn = BPRLoss(num_neg_samples=10)
 
     # ─────────────────────────────────────────
     # TRAINING LOOP
     # ─────────────────────────────────────────
     best_val_loss = float("inf")
-    print(f"\nTraining for {CONFIG['epochs']} epochs...\n")
+    patience = CONFIG.get("patience", 7)
+    epochs_no_improve = 0
+    print(f"\nTraining for {CONFIG['epochs']} epochs (early stopping patience={patience})...\n")
 
     for epoch in range(CONFIG["epochs"]):
 
@@ -210,13 +236,20 @@ def main():
               f"Val Loss: {avg_val_loss:.4f}  "
               f"LR: {current_lr:.6f}", end="")
 
-        # --- Save best model ---
+        # --- Save best model + early stopping ---
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
+            epochs_no_improve = 0
             torch.save(model.state_dict(), "best_model.pt")
             print("  * saved", end="")
+        else:
+            epochs_no_improve += 1
 
         print()
+
+        if epochs_no_improve >= patience:
+            print(f"\n[EARLY STOP] No improvement for {patience} epochs. Stopping at epoch {epoch+1}.")
+            break
 
     print(f"\n[OK] Training complete. Best val loss: {best_val_loss:.4f}")
     print("   Model saved to: best_model.pt")

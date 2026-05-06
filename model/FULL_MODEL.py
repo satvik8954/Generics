@@ -84,8 +84,18 @@ class ExciPickHGNN(nn.Module):
             "excipient": self.exc_emb.weight,
         }
 
-        # 2. GNN message passing
-        enriched = self.gnn(x_dict, graph.edge_index_dict)
+        # 2. Extract edge weights from graph (if available)
+        edge_weight_dict = {}
+        for edge_type in graph.edge_types:
+            store = graph[edge_type]
+            if hasattr(store, 'edge_weight') and store.edge_weight is not None:
+                edge_weight_dict[edge_type] = store.edge_weight
+
+        # 3. GNN message passing (with edge weights)
+        enriched = self.gnn(
+            x_dict, graph.edge_index_dict,
+            edge_weight_dict if edge_weight_dict else None
+        )
         enriched_api = enriched["api"]           # (num_apis, gnn_hidden)
         enriched_exc = enriched["excipient"]     # (V, gnn_hidden)
 
