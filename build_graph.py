@@ -41,7 +41,6 @@ def get_morgan_fp(smiles):
 def compute_jaccard_edges(train_df, num_excipients, threshold):
     """
     Compute excipient co-occurrence edges using Jaccard similarity.
-    Returns edge_index AND edge_weight (Jaccard values).
 
     Jaccard(A, B) = |formulations with both A and B| / |formulations with A or B|
     """
@@ -57,7 +56,7 @@ def compute_jaccard_edges(train_df, num_excipients, threshold):
     exc_ids = sorted(exc_formulations.keys())
     n = len(exc_ids)
 
-    src, dst, weights = [], [], []
+    src, dst = [], []
     computed = 0
 
     for i in range(n):
@@ -75,7 +74,6 @@ def compute_jaccard_edges(train_df, num_excipients, threshold):
             if jaccard >= threshold:
                 src.extend([exc_ids[i], exc_ids[j]])  # bidirectional
                 dst.extend([exc_ids[j], exc_ids[i]])
-                weights.extend([jaccard, jaccard])     # same weight both directions
                 computed += 1
 
         if (i + 1) % 200 == 0:
@@ -84,16 +82,13 @@ def compute_jaccard_edges(train_df, num_excipients, threshold):
     print(f"  Found {computed} co-occurrence pairs ({len(src)} directed edges)")
 
     if src:
-        edge_index = torch.tensor([src, dst], dtype=torch.long)
-        edge_weight = torch.tensor(weights, dtype=torch.float32)
-        return edge_index, edge_weight
-    return torch.zeros((2, 0), dtype=torch.long), torch.zeros(0, dtype=torch.float32)
+        return torch.tensor([src, dst], dtype=torch.long)
+    return torch.zeros((2, 0), dtype=torch.long)
 
 
 def compute_similarity_edges(unique_apis, threshold):
     """
     Compute API-API similarity edges using Tanimoto on Morgan fingerprints.
-    Returns edge_index AND edge_weight (Tanimoto values).
     """
     print(f"  Computing API similarity edges (Tanimoto >= {threshold})...")
 
@@ -101,7 +96,7 @@ def compute_similarity_edges(unique_apis, threshold):
     fps = [get_morgan_fp(s) if isinstance(s, str) else None for s in smiles_list]
 
     n = len(fps)
-    src, dst, weights = [], [], []
+    src, dst = [], []
     pairs = 0
 
     for i in range(n):
@@ -114,7 +109,6 @@ def compute_similarity_edges(unique_apis, threshold):
             if sim >= threshold:
                 src.extend([i, j])  # bidirectional
                 dst.extend([j, i])
-                weights.extend([sim, sim])  # same weight both directions
                 pairs += 1
 
         if (i + 1) % 500 == 0:
@@ -123,10 +117,8 @@ def compute_similarity_edges(unique_apis, threshold):
     print(f"  Found {pairs} similar API pairs ({len(src)} directed edges)")
 
     if src:
-        edge_index = torch.tensor([src, dst], dtype=torch.long)
-        edge_weight = torch.tensor(weights, dtype=torch.float32)
-        return edge_index, edge_weight
-    return torch.zeros((2, 0), dtype=torch.long), torch.zeros(0, dtype=torch.float32)
+        return torch.tensor([src, dst], dtype=torch.long)
+    return torch.zeros((2, 0), dtype=torch.long)
 
 
 def main():
@@ -184,13 +176,13 @@ def main():
 
     # 5. Build (excipient, cooccurs, excipient) edges — Jaccard
     print("\n[5] Building co-occurrence edges (Jaccard)...")
-    cooccur_edge, cooccur_weight = compute_jaccard_edges(
+    cooccur_edge = compute_jaccard_edges(
         train_df, vocab_size, CONFIG["jaccard_threshold"]
     )
 
     # 6. Build (api, similar, api) edges — Tanimoto
     print("\n[6] Building API similarity edges (Tanimoto)...")
-    similar_edge, similar_weight = compute_similarity_edges(
+    similar_edge = compute_similarity_edges(
         unique_apis, CONFIG["similarity_threshold"]
     )
 
@@ -203,28 +195,19 @@ def main():
     graph["api"].num_nodes = len(api_unii_to_idx)
     graph["excipient"].num_nodes = vocab_size
 
-    # Edge indices + weights
-    # uses/used_by: uniform weight = 1.0
+    # Edge indices
     graph["api", "uses", "excipient"].edge_index = uses_edge
-    graph["api", "uses", "excipient"].edge_weight = torch.ones(uses_edge.shape[1], dtype=torch.float32)
     graph["excipient", "used_by", "api"].edge_index = used_by_edge
-    graph["excipient", "used_by", "api"].edge_weight = torch.ones(used_by_edge.shape[1], dtype=torch.float32)
-
-    # cooccurs: weighted by Jaccard similarity
     graph["excipient", "cooccurs", "excipient"].edge_index = cooccur_edge
-    graph["excipient", "cooccurs", "excipient"].edge_weight = cooccur_weight
-
-    # similar: weighted by Tanimoto similarity
     graph["api", "similar", "api"].edge_index = similar_edge
-    graph["api", "similar", "api"].edge_weight = similar_weight
 
     print(f"\n  Graph summary:")
     print(f"    API nodes:        {graph['api'].num_nodes}")
     print(f"    Excipient nodes:  {graph['excipient'].num_nodes}")
     print(f"    uses edges:       {uses_edge.shape[1]}")
     print(f"    used_by edges:    {used_by_edge.shape[1]}")
-    print(f"    cooccurs edges:   {cooccur_edge.shape[1]}  (weighted by Jaccard)")
-    print(f"    similar edges:    {similar_edge.shape[1]}  (weighted by Tanimoto)")
+    print(f"    cooccurs edges:   {cooccur_edge.shape[1]}")
+    print(f"    similar edges:    {similar_edge.shape[1]}")
     # 8. Save
     torch.save(graph, "hetero_graph.pt")
     print(f"\n  Saved graph to: hetero_graph.pt")

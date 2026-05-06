@@ -1,21 +1,19 @@
 """
 gnn_layers.py — Heterogeneous GNN encoder for ExciPick.
 
-Uses PyG's HeteroConv with GATv2Conv per edge type.
-Edge weights (Jaccard/Tanimoto) are passed as edge_attr to inform attention.
+Uses PyG's HeteroConv with SAGEConv per edge type.
 Each layer: HeteroConv → LayerNorm → ReLU → Dropout (+ residual).
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import HeteroConv, GATv2Conv
+from torch_geometric.nn import HeteroConv, SAGEConv
 
 
 class HeteroGNNEncoder(nn.Module):
     """
-    Multi-layer heterogeneous GNN using GATv2Conv per edge type.
-    Edge weights are used as edge_attr (edge_dim=1) in attention computation.
+    Multi-layer heterogeneous GNN using SAGEConv per edge type.
 
     Args:
         metadata: tuple of (node_types, edge_types) from HeteroData.metadata()
@@ -34,14 +32,10 @@ class HeteroGNNEncoder(nn.Module):
         self.norms = nn.ModuleList()
 
         for _ in range(num_layers):
-            # One GATv2Conv per edge type with edge_dim=1 for scalar weights
+            # One SAGEConv per edge type
             conv_dict = {}
             for edge_type in metadata[1]:
-                conv_dict[edge_type] = GATv2Conv(
-                    (-1, -1), hidden_dim,
-                    heads=2, concat=False,
-                    edge_dim=1, add_self_loops=False
-                )
+                conv_dict[edge_type] = SAGEConv((-1, -1), hidden_dim)
 
             self.convs.append(HeteroConv(conv_dict, aggr="sum"))
 
@@ -52,26 +46,18 @@ class HeteroGNNEncoder(nn.Module):
             })
             self.norms.append(norm_dict)
 
-    def forward(self, x_dict, edge_index_dict, edge_weight_dict=None):
+    def forward(self, x_dict, edge_index_dict):
         """
         Args:
             x_dict: {node_type: (num_nodes, hidden_dim)} node features
             edge_index_dict: {edge_type: (2, num_edges)} edge indices
-            edge_weight_dict: {edge_type: (num_edges,)} optional edge weights
 
         Returns:
             x_dict: enriched node embeddings, same structure as input
         """
         for conv, norm_dict in zip(self.convs, self.norms):
-            # Convert scalar edge weights to (num_edges, 1) edge_attr
-            if edge_weight_dict is not None:
-                edge_attr_dict = {
-                    et: w.unsqueeze(-1) for et, w in edge_weight_dict.items()
-                }
-                x_dict_new = conv(x_dict, edge_index_dict,
-                                  edge_attr_dict=edge_attr_dict)
-            else:
-                x_dict_new = conv(x_dict, edge_index_dict)
+            # Message passing
+            x_dict_new = conv(x_dict, edge_index_dict)
 
             # Residual + LayerNorm + ReLU + Dropout
             x_dict = {
