@@ -8,7 +8,7 @@ build/
 *.egg
 
 # Data & model artifacts
-*.pkl
+
 *.pt
 *.pth
 *.h5
