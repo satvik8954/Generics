@@ -15,53 +15,28 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import torch.nn.functional as F
 
-class BPRLoss(torch.nn.Module):
-    """
-    Bayesian Personalized Ranking Loss for multi-label recommendation.
-
-    For each sample, samples negative excipients and optimizes the model
-    so that positive excipients score higher than negatives.
-    Directly optimizes ranking quality (aligned with Precision/Recall/Jaccard@K).
-    """
-    def __init__(self, num_neg_samples=10):
+class FocalLoss(torch.nn.Module):
+    def __init__(self, alpha=0.25, gamma=2.0, reduction="mean"):
         super().__init__()
-        self.num_neg_samples = num_neg_samples
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
 
     def forward(self, inputs, targets):
-        """
-        Args:
-            inputs:  (B, V) raw logits
-            targets: (B, V) multi-hot binary targets
-        """
-        B, V = inputs.shape
-        device = inputs.device
+        p = torch.sigmoid(inputs)
+        ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
+        p_t = p * targets + (1 - p) * (1 - targets)
+        loss = ce_loss * ((1 - p_t) ** self.gamma)
 
-        total_loss = 0.0
-        count = 0
+        if self.alpha >= 0:
+            alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
+            loss = alpha_t * loss
 
-        for i in range(B):
-            pos_idx = targets[i].nonzero(as_tuple=True)[0]  # indices of true excipients
-            neg_idx = (targets[i] == 0).nonzero(as_tuple=True)[0]  # indices of false excipients
-
-            if len(pos_idx) == 0 or len(neg_idx) == 0:
-                continue
-
-            # Sample negatives
-            n_neg = min(self.num_neg_samples, len(neg_idx))
-            neg_sample = neg_idx[torch.randint(0, len(neg_idx), (len(pos_idx) * n_neg,), device=device)]
-
-            # Get scores
-            pos_scores = inputs[i, pos_idx]  # (num_pos,)
-            pos_scores = pos_scores.repeat_interleave(n_neg)  # (num_pos * n_neg,)
-            neg_scores = inputs[i, neg_sample]  # (num_pos * n_neg,)
-
-            # BPR: log sigmoid(pos - neg)
-            total_loss += -F.logsigmoid(pos_scores - neg_scores).mean()
-            count += 1
-
-        if count == 0:
-            return torch.tensor(0.0, device=device, requires_grad=True)
-        return total_loss / count
+        if self.reduction == "mean":
+            return loss.mean()
+        elif self.reduction == "sum":
+            return loss.sum()
+        return loss
 
 from dataset import ExciDataset
 from model.FULL_MODEL import ExciPickHGNN
@@ -165,10 +140,10 @@ def main():
         optimizer, T_max=CONFIG["epochs"]
     )
 
-    # BPR Loss: pairwise ranking loss that directly optimizes top-K quality
-    print("  Using BPR Loss (num_neg_samples=10)")
+    # Focal Loss: proven best performer
+    print("  Using Focal Loss (alpha=0.25, gamma=2.0)")
 
-    loss_fn = BPRLoss(num_neg_samples=10)
+    loss_fn = FocalLoss(alpha=0.25, gamma=2.0)
 
     # ─────────────────────────────────────────
     # TRAINING LOOP

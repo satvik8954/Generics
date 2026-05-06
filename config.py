@@ -28,8 +28,8 @@ CONFIG = {
     # GNN (HetGNN)
     # ========================
 
-    "gnn_hidden": 128,
-    "gnn_layers": 2,
+    "gnn_hidden": 256,
+    "gnn_layers": 4,
     "gnn_dropout": 0.2,
     "jaccard_threshold": 0.1,
     "similarity_threshold": 0.6,
