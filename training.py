@@ -13,6 +13,22 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import torch.nn.functional as F
+
+class FocalLoss(torch.nn.Module):
+    def __init__(self, gamma=2.0, pos_weight=None):
+        super().__init__()
+        self.gamma = gamma
+        self.pos_weight = pos_weight
+
+    def forward(self, inputs, targets):
+        bce_loss = F.binary_cross_entropy_with_logits(
+            inputs, targets, reduction='none', pos_weight=self.pos_weight
+        )
+        p = torch.sigmoid(inputs)
+        p_t = p * targets + (1 - p) * (1 - targets)
+        loss = bce_loss * ((1 - p_t) ** self.gamma)
+        return loss.mean()
 
 from dataset import ExciDataset
 from model.FULL_MODEL import ExciPickHGNN
@@ -122,7 +138,7 @@ def main():
     pos_weight = torch.tensor([pw], device=device)
     print(f"  pos_weight: {pw:.1f} (avg {avg_positives:.1f} positives per sample out of {vocab_size})")
 
-    loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    loss_fn = FocalLoss(gamma=2.0, pos_weight=pos_weight)
 
     # ─────────────────────────────────────────
     # TRAINING LOOP

@@ -33,7 +33,8 @@ def get_morgan_fp(smiles):
     """Generates 2048-bit Morgan Fingerprint (radius 2)."""
     mol = Chem.MolFromSmiles(smiles)
     if mol:
-        return AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=2048)
+        fpg = AllChem.GetMorganGenerator(radius=2, fpSize=2048)
+        return fpg.GetFingerprint(mol)
     return None
 
 
@@ -154,7 +155,7 @@ def main():
     api_unii_to_idx = {unii: i for i, unii in enumerate(unique_apis["api_unii"])}
 
     api_features = torch.tensor(
-        [api_features_map[unii] for unii in unique_apis["api_unii"]],
+        np.array([api_features_map[unii] for unii in unique_apis["api_unii"]]),
         dtype=torch.float32
     )
     print(f"  API nodes: {len(api_unii_to_idx)}, features shape: {api_features.shape}")
