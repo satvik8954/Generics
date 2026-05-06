@@ -14,14 +14,8 @@ class Scorer(nn.Module):
     def __init__(self):
         super().__init__()
 
-        input_dim = CONFIG["context_out"] + CONFIG["gnn_hidden"]
-
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, CONFIG["scorer_hidden"]),
-            nn.ReLU(),
-            nn.Dropout(CONFIG["dropout_scorer"]),
-            nn.Linear(CONFIG["scorer_hidden"], 1),
-        )
+        # Bilinear interaction: context (192) x excipient (128) -> 1 logit
+        self.bilinear = nn.Bilinear(CONFIG["context_out"], CONFIG["gnn_hidden"], 1)
 
     def forward(self, context, exc_embs):
         """
@@ -39,7 +33,7 @@ class Scorer(nn.Module):
         context_exp = context.unsqueeze(1).expand(-1, V, -1)   # (B, V, context_out)
         exc_exp = exc_embs.unsqueeze(0).expand(B, -1, -1)      # (B, V, gnn_hidden)
 
-        x = torch.cat([context_exp, exc_exp], dim=2)            # (B, V, input_dim)
-        scores = self.net(x).squeeze(-1)                        # (B, V)
-
-        return scores
+        # Bilinear expects (B*V, in1), (B*V, in2)
+        scores = self.bilinear(context_exp.reshape(-1, CONFIG["context_out"]),
+                               exc_exp.reshape(-1, CONFIG["gnn_hidden"]))
+        return scores.view(B, V)

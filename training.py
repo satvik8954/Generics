@@ -16,19 +16,27 @@ from tqdm import tqdm
 import torch.nn.functional as F
 
 class FocalLoss(torch.nn.Module):
-    def __init__(self, gamma=2.0, pos_weight=None):
+    def __init__(self, alpha=0.25, gamma=2.0, reduction="mean"):
         super().__init__()
+        self.alpha = alpha
         self.gamma = gamma
-        self.pos_weight = pos_weight
+        self.reduction = reduction
 
     def forward(self, inputs, targets):
-        bce_loss = F.binary_cross_entropy_with_logits(
-            inputs, targets, reduction='none', pos_weight=self.pos_weight
-        )
         p = torch.sigmoid(inputs)
+        ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
         p_t = p * targets + (1 - p) * (1 - targets)
-        loss = bce_loss * ((1 - p_t) ** self.gamma)
-        return loss.mean()
+        loss = ce_loss * ((1 - p_t) ** self.gamma)
+
+        if self.alpha >= 0:
+            alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
+            loss = alpha_t * loss
+
+        if self.reduction == "mean":
+            return loss.mean()
+        elif self.reduction == "sum":
+            return loss.sum()
+        return loss
 
 from dataset import ExciDataset
 from model.FULL_MODEL import ExciPickHGNN
@@ -132,13 +140,11 @@ def main():
         optimizer, T_max=CONFIG["epochs"]
     )
 
-    # Class imbalance: compute pos_weight from training data
-    avg_positives = train_df["excipient_ids"].apply(len).mean()
-    pw = (vocab_size - avg_positives) / avg_positives
-    pos_weight = torch.tensor([pw], device=device)
-    print(f"  pos_weight: {pw:.1f} (avg {avg_positives:.1f} positives per sample out of {vocab_size})")
+    # Class imbalance is handled dynamically by Focal Loss
+    # We no longer need the extreme pos_weight approach
+    print("  Using Focal Loss (alpha=0.25, gamma=2.0) instead of standard BCE.")
 
-    loss_fn = FocalLoss(gamma=2.0, pos_weight=pos_weight)
+    loss_fn = FocalLoss(alpha=0.25, gamma=2.0)
 
     # ─────────────────────────────────────────
     # TRAINING LOOP

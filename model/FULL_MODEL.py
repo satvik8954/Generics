@@ -18,20 +18,6 @@ from model.excipient_scorer import Scorer
 from config import CONFIG
 
 
-class ResidualContextFusion(nn.Module):
-    def __init__(self, in_dim, out_dim, dropout):
-        super().__init__()
-        self.mlp = nn.Sequential(
-            nn.Linear(in_dim, out_dim),
-            nn.LayerNorm(out_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout)
-        )
-        self.proj = nn.Linear(in_dim, out_dim) if in_dim != out_dim else nn.Identity()
-        
-    def forward(self, x):
-        return self.mlp(x) + self.proj(x)
-
 class ExciPickHGNN(nn.Module):
     def __init__(self, graph_metadata, vocab_size):
         """
@@ -69,10 +55,11 @@ class ExciPickHGNN(nn.Module):
             + CONFIG["form_emb"]
         )
 
-        self.fusion = ResidualContextFusion(
-            fusion_in, 
-            CONFIG["context_out"], 
-            CONFIG["dropout_context"]
+        self.fusion = nn.Sequential(
+            nn.Linear(fusion_in, CONFIG["context_out"]),
+            nn.LayerNorm(CONFIG["context_out"]),
+            nn.ReLU(),
+            nn.Dropout(CONFIG["dropout_context"]),
         )
 
         # --- Excipient scorer ---
