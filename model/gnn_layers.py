@@ -8,12 +8,13 @@ Each layer: HeteroConv → LayerNorm → ReLU → Dropout (+ residual).
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import HeteroConv, SAGEConv
+from torch_geometric.nn import HeteroConv, GraphConv
 
 
 class HeteroGNNEncoder(nn.Module):
     """
-    Multi-layer heterogeneous GNN using SAGEConv per edge type.
+    Multi-layer heterogeneous GNN using GraphConv per edge type.
+    GraphConv supports edge_weight for weighted message passing.
 
     Args:
         metadata: tuple of (node_types, edge_types) from HeteroData.metadata()
@@ -32,10 +33,10 @@ class HeteroGNNEncoder(nn.Module):
         self.norms = nn.ModuleList()
 
         for _ in range(num_layers):
-            # One SAGEConv per edge type
+            # One GraphConv per edge type (supports edge_weight)
             conv_dict = {}
             for edge_type in metadata[1]:
-                conv_dict[edge_type] = SAGEConv((-1, -1), hidden_dim)
+                conv_dict[edge_type] = GraphConv((-1, -1), hidden_dim)
 
             self.convs.append(HeteroConv(conv_dict, aggr="sum"))
 
@@ -57,14 +58,12 @@ class HeteroGNNEncoder(nn.Module):
             x_dict: enriched node embeddings, same structure as input
         """
         for conv, norm_dict in zip(self.convs, self.norms):
-            # Build kwargs for edge weights if provided
-            kwargs = {}
-            if edge_weight_dict is not None:
-                for edge_type, weight in edge_weight_dict.items():
-                    kwargs[edge_type] = {"edge_weight": weight}
-
             # Message passing (with optional edge weights)
-            x_dict_new = conv(x_dict, edge_index_dict, **kwargs)
+            if edge_weight_dict is not None:
+                x_dict_new = conv(x_dict, edge_index_dict,
+                                  edge_weight_dict=edge_weight_dict)
+            else:
+                x_dict_new = conv(x_dict, edge_index_dict)
 
             # Residual + LayerNorm + ReLU + Dropout
             x_dict = {
