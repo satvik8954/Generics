@@ -55,18 +55,29 @@ class HeteroGNNEncoder(nn.Module):
         Returns:
             x_dict: enriched node embeddings, same structure as input
         """
-        for conv, norm_dict in zip(self.convs, self.norms):
+        for layer_idx, (conv, norm_dict) in enumerate(zip(self.convs, self.norms)):
             # Message passing
             x_dict_new = conv(x_dict, edge_index_dict)
 
-            # Residual + LayerNorm + ReLU + Dropout
-            x_dict = {
-                key: F.dropout(
-                    F.relu(norm_dict[key](x_dict_new[key] + x_dict[key])),
-                    p=self.dropout,
-                    training=self.training,
-                )
-                for key in x_dict_new.keys()
-            }
+            if layer_idx == 0:
+                # No residual — input dim != hidden_dim
+                x_dict = {
+                    key: F.dropout(
+                        F.relu(norm_dict[key](x_dict_new[key])),
+                        p=self.dropout,
+                        training=self.training,
+                    )
+                    for key in x_dict_new.keys()
+                }
+            else:
+                # Residual safe from layer 1 onward
+                x_dict = {
+                    key: F.dropout(
+                        F.relu(norm_dict[key](x_dict_new[key] + x_dict[key])),
+                        p=self.dropout,
+                        training=self.training,
+                    )
+                    for key in x_dict_new.keys()
+                }
 
         return x_dict

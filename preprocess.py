@@ -75,6 +75,11 @@ def main():
 
     # 1. Load raw data + precomputed features
     df = pd.read_csv(INPUT_PATH)
+    
+    # Filter to oral route only
+    df = df[df['route'].str.upper().str.contains('ORAL', na=False)]
+    print(f"    Oral-only formulations: {len(df)}")
+    
     features_df = pd.read_csv(FEATURES_PATH)
     print(f"\n[1] Loaded: {len(df)} rows, {len(features_df)} API feature vectors")
 

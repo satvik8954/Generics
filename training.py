@@ -38,19 +38,6 @@ class FocalLoss(torch.nn.Module):
             return loss.sum()
         return loss
 
-
-def contrastive_loss(scores, targets, temperature=0.1):
-    """
-    Multi-label InfoNCE contrastive loss.
-    For each positive excipient, maximize its score relative to all others.
-    """
-    logits = scores / temperature
-    log_probs = F.log_softmax(logits, dim=1)  # (B, V)
-    pos_count = targets.sum(dim=1).clamp(min=1)  # (B,)
-    loss = -(log_probs * targets).sum(dim=1) / pos_count  # (B,)
-    return loss.mean()
-
-
 from dataset import ExciDataset
 from model.FULL_MODEL import ExciPickHGNN
 from config import CONFIG
@@ -153,11 +140,10 @@ def main():
         optimizer, T_max=CONFIG["epochs"]
     )
 
-    # Focal Loss + Contrastive auxiliary
-    print("  Using Focal Loss (alpha=0.25, gamma=2.0) + Contrastive (λ=0.05, τ=0.1)")
+    # Focal Loss: proven best performer
+    print("  Using Focal Loss (alpha=0.25, gamma=2.0)")
 
     loss_fn = FocalLoss(alpha=0.25, gamma=2.0)
-    contrastive_weight = 0.05
 
     # ─────────────────────────────────────────
     # TRAINING LOOP
@@ -184,9 +170,7 @@ def main():
 
             optimizer.zero_grad()
             output = model(graph, api_idx, dose, per_unit, route, form)
-            loss_focal = loss_fn(output, target)
-            loss_con = contrastive_loss(output, target)
-            loss = loss_focal + contrastive_weight * loss_con
+            loss = loss_fn(output, target)
             loss.backward()
             optimizer.step()
 
@@ -210,7 +194,7 @@ def main():
                 target = batch["target"].to(device)
 
                 output = model(graph, api_idx, dose, per_unit, route, form)
-                loss = loss_fn(output, target)  # Val tracks focal only
+                loss = loss_fn(output, target)
 
                 val_loss += loss.item()
                 val_batches += 1
