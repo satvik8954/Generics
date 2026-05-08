@@ -1,5 +1,5 @@
 """
-preprocess.py -- Prepares Data/f3.csv for the ExciPick model.
+preprocess.py -- Prepares Data/mapped_formulations.csv for the ExciPick model.
 
 Requires: Run `python compute_features.py` ONCE first to generate Data/api_features.csv.
 
@@ -23,7 +23,7 @@ from collections import Counter
 # -----------------------------------------------
 # CONFIG
 # -----------------------------------------------
-INPUT_PATH = "Data/f3.csv"
+INPUT_PATH = "Data/mapped_formulations.csv"
 FEATURES_PATH = "Data/api_features.csv"
 OUTPUT_PATH = "processed_data.pkl"
 
