@@ -29,7 +29,11 @@ OUTPUT_PATH = "processed_data.pkl"
 
 MIN_EXCIPIENTS = 2
 MAX_EXCIPIENTS = 30
-EXCIPIENT_MIN_FREQ = 3
+EXCIPIENT_MIN_FREQ = 10
+TARGET_FORMS = [
+    "TABLET", "TABLET, FILM COATED", "TABLET, EXTENDED RELEASE", 
+    "TABLET, DELAYED RELEASE", "TABLET, FILM COATED, EXTENDED RELEASE"
+]
 
 DESCRIPTOR_NAMES = [
     "MolWt", "MolLogP", "TPSA", "NumHDonors", "NumHAcceptors",
@@ -58,6 +62,14 @@ def extract_smiles(json_str):
     except Exception:
         return None
 
+def get_exc_unii_set(inactive_str):
+    """Extract a sorted tuple of excipient UNIIs from JSON."""
+    try:
+        items = json.loads(inactive_str)
+        return tuple(sorted(set(i.get('unii', '') for i in items if 'unii' in i)))
+    except Exception:
+        return tuple()
+
 
 # -----------------------------------------------
 # MAIN PREPROCESSING
@@ -76,9 +88,16 @@ def main():
     # 1. Load raw data + precomputed features
     df = pd.read_csv(INPUT_PATH)
     
-    # Filter to oral route only
-    df = df[df['route'].str.upper().str.contains('ORAL', na=False)]
-    print(f"    Oral-only formulations: {len(df)}")
+    # Precise Deduplication
+    print(f"[0] Rows before dedup: {len(df)}")
+    df['exc_unii_set'] = df['inactive_ingredients'].apply(get_exc_unii_set)
+    df = df.drop_duplicates(subset=['api_unii', 'dose_mg', 'exc_unii_set', 'route', 'primary_dosage_form'])
+    print(f"    Rows after dedup: {len(df)}")
+    
+    # Filter to oral route and target forms only
+    df = df[df['route'].str.upper() == 'ORAL']
+    df = df[df['primary_dosage_form'].str.upper().isin(TARGET_FORMS)]
+    print(f"    Oral tablet formulations: {len(df)}")
     
     features_df = pd.read_csv(FEATURES_PATH)
     print(f"\n[1] Loaded: {len(df)} rows, {len(features_df)} API feature vectors")
