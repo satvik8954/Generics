@@ -18,7 +18,8 @@ def get_morgan_fp(smiles):
     """Generates 2048-bit Morgan Fingerprint (radius 2)."""
     mol = Chem.MolFromSmiles(smiles)
     if mol:
-        return AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=2048)
+        fpg = AllChem.GetMorganGenerator(radius=2, fpSize=2048)
+        return fpg.GetFingerprint(mol)
     return None
 
 

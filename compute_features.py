@@ -70,18 +70,11 @@ def main():
     print("=" * 50)
 
     # Load raw data
-    df = pd.read_csv("Data/f3.csv")
+    df = pd.read_csv("Data/mapped_formulations.csv")
     print(f"Loaded {len(df)} rows")
 
-    # Extract unique SMILES per API (avoids recomputing for same molecule)
-    def extract_smiles(json_str):
-        try:
-            smap = json.loads(json_str)
-            return list(smap.values())[0]
-        except Exception:
-            return None
-
-    df["smiles"] = df["api_smiles_map"].apply(extract_smiles)
+    # Extract unique SMILES per API
+    df["smiles"] = df["api_smiles"]
     unique_apis = df[["api_unii", "smiles"]].drop_duplicates(subset="api_unii").dropna(subset=["smiles"])
     print(f"Unique APIs with SMILES: {len(unique_apis)}")
 

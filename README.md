@@ -21,7 +21,7 @@ Dosage Form (embedding) ──────────────────�
 
 ## Dataset
 
-- **Source**: FDA drug labels (SPL/NDC), preprocessed into `Data/f3.csv`
+- **Source**: FDA drug labels (SPL/NDC), preprocessed into `Data/mapped_formulations.csv`
 - **Size**: ~29,000 formulations, 1,056 unique APIs, 1,299 excipients
 - **Split**: 80/10/10 train/val/test by API chemical similarity clusters (Tanimoto on Morgan fingerprints) to prevent data leakage
 
@@ -30,7 +30,7 @@ Dosage Form (embedding) ──────────────────�
 ```
 Generics/
 ├── Data/
-│   ├── f3.csv                  # Raw dataset (FDA drug labels)
+│   ├── mapped_formulations.csv # Raw dataset generated from JSONL
 │   └── api_features.csv        # Precomputed molecular descriptors (generated)
 ├── model/
 │   ├── FULL_MODEL.py           # ExciPickModel (assembles all components)

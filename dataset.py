@@ -1,8 +1,8 @@
 """
-dataset.py — PyTorch Dataset for ExciPick model.
+dataset.py — PyTorch Dataset for ExciPick HetGNN model.
 
 Each sample returns:
-  - api:      (20,) float tensor — normalized molecular descriptors
+  - api_idx:  scalar long — index of the API node in the heterogeneous graph
   - dose:     scalar float — normalized log dose
   - per_unit: scalar long — per-unit ID
   - route:    scalar long — route ID
@@ -11,20 +11,21 @@ Each sample returns:
 """
 
 import torch
-import numpy as np
 from torch.utils.data import Dataset
 
 
 class ExciDataset(Dataset):
-    def __init__(self, df, excipient_vocab_size):
+    def __init__(self, df, excipient_vocab_size, api_node_mapping):
         """
         Args:
             df: preprocessed DataFrame with columns:
-                api_features, dose_normalized, per_unit_id, route_id, form_id, excipient_ids
+                api_unii, dose_normalized, per_unit_id, route_id, form_id, excipient_ids
             excipient_vocab_size: total number of excipients in vocabulary
+            api_node_mapping: dict mapping api_unii -> graph node index
         """
         self.df = df.reset_index(drop=True)
         self.vocab_size = excipient_vocab_size
+        self.api_node_mapping = api_node_mapping
 
     def __len__(self):
         return len(self.df)
@@ -32,8 +33,10 @@ class ExciDataset(Dataset):
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
 
-        # API molecular descriptors (20-dim normalized vector)
-        api = torch.tensor(row["api_features"], dtype=torch.float32)
+        # API node index in the heterogeneous graph
+        api_idx = torch.tensor(
+            self.api_node_mapping[row["api_unii"]], dtype=torch.long
+        )
 
         # Normalized dose
         dose = torch.tensor(row["dose_normalized"], dtype=torch.float32)
@@ -49,7 +52,7 @@ class ExciDataset(Dataset):
             target[eid] = 1.0
 
         return {
-            "api": api,
+            "api_idx": api_idx,
             "dose": dose,
             "per_unit": per_unit,
             "route": route,
