@@ -2,9 +2,9 @@
 build_graph.py — Builds a heterogeneous graph for ExciPick HetGNN.
 
 Graph structure:
-  Node types:
-    - api:       molecular descriptor features (20-dim)
-    - excipient: learned embeddings + precomputed descriptor features
+    Node types:
+        - api:       molecular descriptor features (20-dim)
+        - excipient: learnable embeddings (no initial features)
 
   Edge types:
     - (api, uses, excipient):           from training formulations
@@ -16,12 +16,9 @@ Usage:
     python build_graph.py
 """
 
-import os
 import pickle
-import re
 import torch
 import numpy as np
-import pandas as pd
 from collections import defaultdict
 from torch_geometric.data import HeteroData
 
@@ -30,90 +27,6 @@ from rdkit.Chem import AllChem
 
 from split import split_by_api_cluster
 from config import CONFIG
-
-EXCIPIENT_FEATURES_PATH = "Data/excipientsFeaturesDB.csv"
-
-
-def normalize_excipient_name(name):
-    if not isinstance(name, str):
-        return ""
-    cleaned = re.sub(r"[^a-z0-9]+", " ", name.lower())
-    return " ".join(cleaned.split())
-
-
-def load_excipient_features(excipient_vocab):
-    if not os.path.exists(EXCIPIENT_FEATURES_PATH):
-        raise FileNotFoundError(f"Missing excipient features: {EXCIPIENT_FEATURES_PATH}")
-
-    df = pd.read_csv(EXCIPIENT_FEATURES_PATH)
-    df["norm_name"] = df["drug_name"].apply(normalize_excipient_name)
-
-    numeric_cols = [
-        "molecularweight",
-        "logp",
-        "tpsa",
-        "molarrefractivity",
-        "hbonddonors",
-        "hbondacceptors",
-        "nhohcount",
-        "nocount",
-        "rotatablebonds",
-        "numheteroatoms",
-        "qed",
-        "amidebonds",
-        "labuteasa",
-        "bertzct",
-        "lipinskiviolations",
-    ]
-
-    for col in numeric_cols:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-
-    def to_bool(val):
-        if isinstance(val, bool):
-            return float(val)
-        if isinstance(val, str):
-            return 1.0 if val.strip().lower() == "true" else 0.0
-        return float(bool(val))
-
-    df["solubilityflag"] = df["solubilityflag"].apply(to_bool)
-    df["permeabilityflag"] = df["permeabilityflag"].apply(to_bool)
-
-    bcs = df["predictedbcsclass"].astype(str).str.upper().str.strip()
-    df["bcs_I"] = (bcs == "I").astype(float)
-    df["bcs_II"] = (bcs == "II").astype(float)
-    df["bcs_III"] = (bcs == "III").astype(float)
-    df["bcs_IV"] = (bcs == "IV").astype(float)
-
-    means = df[numeric_cols].mean()
-    stds = df[numeric_cols].std().replace(0, 1)
-    df[numeric_cols] = (df[numeric_cols] - means) / stds
-
-    feat_cols = numeric_cols + [
-        "solubilityflag",
-        "permeabilityflag",
-        "bcs_I",
-        "bcs_II",
-        "bcs_III",
-        "bcs_IV",
-    ]
-
-    df[feat_cols] = df[feat_cols].fillna(0.0)
-
-    feat_dim = len(feat_cols)
-    features = torch.zeros((len(excipient_vocab), feat_dim), dtype=torch.float32)
-
-    missing = 0
-    for name, idx in excipient_vocab.items():
-        key = normalize_excipient_name(name)
-        match = df[df["norm_name"] == key]
-        if match.empty:
-            missing += 1
-            continue
-        features[idx] = torch.tensor(match.iloc[0][feat_cols].values, dtype=torch.float32)
-
-    print(f"  Excipient features: {feat_dim} dims; matched {len(excipient_vocab) - missing}/{len(excipient_vocab)}")
-    return features
 
 
 def get_morgan_fp(smiles):
@@ -281,7 +194,6 @@ def main():
     graph["api"].x = api_features
     graph["api"].num_nodes = len(api_unii_to_idx)
     graph["excipient"].num_nodes = vocab_size
-    graph["excipient"].x = load_excipient_features(excipient_vocab)
 
     # Edge indices
     graph["api", "uses", "excipient"].edge_index = uses_edge

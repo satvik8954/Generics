@@ -42,6 +42,87 @@ from dataset import ExciDataset
 from model.FULL_MODEL import ExciPickHGNN
 from config import CONFIG
 
+NEG_RATIO = 10
+
+
+def build_cooccur_pool(df, vocab_size):
+    cooccur = [set() for _ in range(vocab_size)]
+    for exc_list in df["excipient_ids"]:
+        for i, exc_i in enumerate(exc_list):
+            for exc_j in exc_list:
+                if exc_i != exc_j:
+                    cooccur[exc_i].add(exc_j)
+    return [list(s) for s in cooccur]
+
+
+def build_route_form_pool(df):
+    pool = {}
+    for _, row in df.iterrows():
+        key = (int(row["route_id"]), int(row["form_id"]))
+        pool.setdefault(key, set()).update(row["excipient_ids"])
+    return {k: list(v) for k, v in pool.items()}
+
+
+def sample_negative_indices(pos_idx, route_id, form_id, num_neg, vocab_size, cooccur, route_form_pool, rng):
+    pos_set = set(pos_idx)
+    candidate_set = set()
+
+    for pid in pos_idx:
+        candidate_set.update(cooccur[pid])
+
+    candidate_set.update(route_form_pool.get((int(route_id), int(form_id)), []))
+    candidate_set.difference_update(pos_set)
+
+    negs = []
+    if candidate_set:
+        cand_list = list(candidate_set)
+        sample_size = min(num_neg, len(cand_list))
+        negs.extend(rng.choice(cand_list, size=sample_size, replace=False).tolist())
+
+    if len(negs) < num_neg:
+        remaining = num_neg - len(negs)
+        fallback = [i for i in range(vocab_size) if i not in pos_set and i not in set(negs)]
+        if fallback:
+            sample_size = min(remaining, len(fallback))
+            negs.extend(rng.choice(fallback, size=sample_size, replace=False).tolist())
+
+    return negs
+
+
+def sampled_bce_loss(output, target, route, form, vocab_size, cooccur, route_form_pool, rng):
+    batch_logits = []
+    batch_targets = []
+
+    for i in range(output.size(0)):
+        pos_idx = target[i].nonzero(as_tuple=False).squeeze(-1).tolist()
+        if not pos_idx:
+            continue
+
+        num_neg = max(1, int(len(pos_idx) * NEG_RATIO))
+        neg_idx = sample_negative_indices(
+            pos_idx,
+            route[i].item(),
+            form[i].item(),
+            num_neg,
+            vocab_size,
+            cooccur,
+            route_form_pool,
+            rng,
+        )
+
+        idx = pos_idx + neg_idx
+        logits = output[i, idx]
+        targets = torch.zeros(len(idx), device=output.device)
+        targets[: len(pos_idx)] = 1.0
+
+        batch_logits.append(logits)
+        batch_targets.append(targets)
+
+    return F.binary_cross_entropy_with_logits(
+        torch.cat(batch_logits, dim=0),
+        torch.cat(batch_targets, dim=0),
+    )
+
 
 def main():
     # ─────────────────────────────────────────
@@ -70,6 +151,11 @@ def main():
 
     print(f"  Dataset splits — Train: {len(train_df)}, Val: {len(val_df)}, Test: {len(test_df)}")
     print(f"  Excipient vocab: {vocab_size}")
+
+    # Hard-negative pools (train only)
+    rng = np.random.default_rng(CONFIG["seed"])
+    cooccur_pool = build_cooccur_pool(train_df, vocab_size)
+    route_form_pool = build_route_form_pool(train_df)
 
     # ─────────────────────────────────────────
     # LOAD GRAPH + API MAPPING
@@ -118,7 +204,6 @@ def main():
     model = ExciPickHGNN(
         graph_metadata=graph.metadata(),
         vocab_size=vocab_size,
-        excipient_feat_dim=graph["excipient"].x.shape[1],
     ).to(device)
 
     # Dummy forward pass to initialize lazy SAGEConv parameters
@@ -141,10 +226,8 @@ def main():
         optimizer, T_max=CONFIG["epochs"]
     )
 
-    # Focal Loss: proven best performer
-    print("  Using Focal Loss (alpha=0.25, gamma=2.0)")
-
-    loss_fn = FocalLoss(alpha=0.25, gamma=2.0)
+    # Sampled BCE with hard negatives
+    print(f"  Using sampled BCE (neg_ratio={NEG_RATIO}x)")
 
     # ─────────────────────────────────────────
     # TRAINING LOOP
@@ -171,7 +254,16 @@ def main():
 
             optimizer.zero_grad()
             output = model(graph, api_idx, dose, per_unit, route, form)
-            loss = loss_fn(output, target)
+            loss = sampled_bce_loss(
+                output,
+                target,
+                route,
+                form,
+                vocab_size,
+                cooccur_pool,
+                route_form_pool,
+                rng,
+            )
             loss.backward()
             optimizer.step()
 
@@ -195,7 +287,16 @@ def main():
                 target = batch["target"].to(device)
 
                 output = model(graph, api_idx, dose, per_unit, route, form)
-                loss = loss_fn(output, target)
+                loss = sampled_bce_loss(
+                    output,
+                    target,
+                    route,
+                    form,
+                    vocab_size,
+                    cooccur_pool,
+                    route_form_pool,
+                    rng,
+                )
 
                 val_loss += loss.item()
                 val_batches += 1
