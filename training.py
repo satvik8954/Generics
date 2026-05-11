@@ -223,9 +223,9 @@ def main():
 
         print()
 
-        if epochs_no_improve >= patience:
-            print(f"\n[EARLY STOP] No improvement for {patience} epochs. Stopping at epoch {epoch+1}.")
-            break
+        # if epochs_no_improve >= patience:
+        #     print(f"\n[EARLY STOP] No improvement for {patience} epochs. Stopping at epoch {epoch+1}.")
+        #     break
 
     print(f"\n[OK] Training complete. Best val loss: {best_val_loss:.4f}")
     print("   Model saved to: best_model.pt")
