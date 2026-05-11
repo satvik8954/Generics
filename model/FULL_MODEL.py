@@ -19,7 +19,7 @@ from config import CONFIG
 
 
 class ExciPickHGNN(nn.Module):
-    def __init__(self, graph_metadata, vocab_size):
+    def __init__(self, graph_metadata, vocab_size, excipient_feat_dim):
         """
         Args:
             graph_metadata: tuple from HeteroData.metadata()
@@ -31,6 +31,17 @@ class ExciPickHGNN(nn.Module):
         # --- Node feature projectors ---
         self.api_proj = APIProjector()
         self.exc_emb = nn.Embedding(vocab_size, CONFIG["gnn_hidden"])
+        self.exc_feat_proj = nn.Sequential(
+            nn.Linear(excipient_feat_dim, CONFIG["gnn_hidden"]),
+            nn.LayerNorm(CONFIG["gnn_hidden"]),
+            nn.ReLU(),
+        )
+        self.exc_fuse = nn.Sequential(
+            nn.Linear(CONFIG["gnn_hidden"] * 2, CONFIG["gnn_hidden"]),
+            nn.LayerNorm(CONFIG["gnn_hidden"]),
+            nn.ReLU(),
+            nn.Dropout(CONFIG["gnn_dropout"]),
+        )
 
         # --- GNN encoder ---
         self.gnn = HeteroGNNEncoder(
@@ -79,9 +90,13 @@ class ExciPickHGNN(nn.Module):
             scores: (B, vocab_size) — raw logit scores per excipient
         """
         # 1. Project node features to GNN hidden dim
+        exc_feat = graph["excipient"].x
+        exc_feat_proj = self.exc_feat_proj(exc_feat)
+        exc_input = self.exc_fuse(torch.cat([self.exc_emb.weight, exc_feat_proj], dim=1))
+
         x_dict = {
             "api": self.api_proj(graph["api"].x),
-            "excipient": self.exc_emb.weight,
+            "excipient": exc_input,
         }
 
         # 2. GNN message passing

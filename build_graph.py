@@ -4,7 +4,7 @@ build_graph.py — Builds a heterogeneous graph for ExciPick HetGNN.
 Graph structure:
     Node types:
         - api:       molecular descriptor features (20-dim)
-        - excipient: learnable embeddings (no initial features)
+        - excipient: incompatibility-flag features
 
   Edge types:
     - (api, uses, excipient):           from training formulations
@@ -16,7 +16,9 @@ Usage:
     python build_graph.py
 """
 
+import json
 import pickle
+import re
 import torch
 import numpy as np
 from collections import defaultdict
@@ -27,6 +29,76 @@ from rdkit.Chem import AllChem
 
 from split import split_by_api_cluster
 from config import CONFIG
+
+EXCIPIENT_FLAGS_PATH = "Data/incompatibilities_flags.json"
+
+
+def normalize_excipient_name(name):
+    if not isinstance(name, str):
+        return ""
+    cleaned = re.sub(r"[^a-z0-9]+", " ", name.lower())
+    return " ".join(cleaned.split())
+
+
+def to_bool_flag(val):
+    if isinstance(val, bool):
+        return float(val)
+    if val is None:
+        return 0.0
+    if isinstance(val, str):
+        return 1.0 if val.strip().lower() == "true" else 0.0
+    return float(bool(val))
+
+
+def load_excipient_flag_features(excipient_vocab):
+    if not os.path.exists(EXCIPIENT_FLAGS_PATH):
+        raise FileNotFoundError(f"Missing excipient flags: {EXCIPIENT_FLAGS_PATH}")
+
+    with open(EXCIPIENT_FLAGS_PATH, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    flag_keys = [
+        "acid_risk",
+        "alkaline_risk",
+        "oxidizing_agent_risk",
+        "reducing_agent_risk",
+        "reducing_sugar_risk",
+        "metal_ion_risk",
+        "moisture_risk",
+        "salicylate_risk",
+        "alkaloid_risk",
+        "antibiotic_risk",
+        "amine_reactive",
+        "thiol_reactive",
+        "carbonyl_reactive",
+        "plasticizer_risk",
+        "surfactant_risk",
+    ]
+
+    features = torch.zeros((len(excipient_vocab), len(flag_keys) + 1), dtype=torch.float32)
+
+    name_to_flags = {}
+    for item in data:
+        name = normalize_excipient_name(item.get("excipient_name"))
+        if not name:
+            continue
+        flags = [to_bool_flag(item.get(k)) for k in flag_keys]
+        incompatible_with = item.get("incompatible_with") or []
+        flags.append(float(len(incompatible_with)))
+        name_to_flags[name] = flags
+
+    missing = 0
+    for name, idx in excipient_vocab.items():
+        key = normalize_excipient_name(name)
+        if key in name_to_flags:
+            features[idx] = torch.tensor(name_to_flags[key], dtype=torch.float32)
+        else:
+            missing += 1
+
+    print(
+        f"  Excipient flags: {len(flag_keys) + 1} dims; matched {len(excipient_vocab) - missing}/{len(excipient_vocab)}"
+    )
+    return features
 
 
 def get_morgan_fp(smiles):
@@ -194,6 +266,7 @@ def main():
     graph["api"].x = api_features
     graph["api"].num_nodes = len(api_unii_to_idx)
     graph["excipient"].num_nodes = vocab_size
+    graph["excipient"].x = load_excipient_flag_features(excipient_vocab)
 
     # Edge indices
     graph["api", "uses", "excipient"].edge_index = uses_edge

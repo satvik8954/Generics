@@ -29,6 +29,7 @@ def smoke_test():
     graph["api"].x = torch.randn(10, CONFIG["api_in"])
     graph["api"].num_nodes = 10
     graph["excipient"].num_nodes = vocab_size
+    graph["excipient"].x = torch.zeros(vocab_size, 16)
 
     graph["api", "uses", "excipient"].edge_index = torch.tensor(
         [[0, 1, 2], [0, 1, 2]], dtype=torch.long
@@ -46,6 +47,7 @@ def smoke_test():
     model = ExciPickHGNN(
         graph_metadata=graph.metadata(),
         vocab_size=vocab_size,
+        excipient_feat_dim=graph["excipient"].x.shape[1],
     )
 
     api_idx = torch.randint(0, 10, (4,))
@@ -91,6 +93,7 @@ def run_evaluation():
     model = ExciPickHGNN(
         graph_metadata=graph.metadata(),
         vocab_size=vocab_size,
+        excipient_feat_dim=graph["excipient"].x.shape[1],
     ).to(device)
     model.load_state_dict(torch.load("best_model.pt", map_location=device))
     print(f"  Loaded best_model.pt on {device}")
