@@ -118,6 +118,7 @@ def main():
     model = ExciPickHGNN(
         graph_metadata=graph.metadata(),
         vocab_size=vocab_size,
+        excipient_feat_dim=graph["excipient"].x.shape[1],
     ).to(device)
 
     # Dummy forward pass to initialize lazy SAGEConv parameters
