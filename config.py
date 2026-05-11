@@ -8,14 +8,14 @@ CONFIG = {
     "api_hidden": 256,
     "api_out": 128,
 
-    "per_unit_vocab": 4,  # {1, mL, g, L}
+    "per_unit_vocab": 16,  # Padded for safety
     "per_unit_emb": 16,
     "strength_out": 64,
 
-    "route_vocab": 16,    # 14 routes in data, pad to 16
+    "route_vocab": 64,    # Padded for safety
     "route_emb": 32,
 
-    "form_vocab": 110,    # 103 dosage forms in data, pad to 110
+    "form_vocab": 128,    # Padded for safety
     "form_emb": 32,
 
     "context_out": 192,

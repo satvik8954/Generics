@@ -94,10 +94,9 @@ def main():
     df = df.drop_duplicates(subset=['api_unii', 'dose_mg', 'exc_unii_set', 'route', 'primary_dosage_form'])
     print(f"    Rows after dedup: {len(df)}")
     
-    # Filter to oral route and target forms only
-    df = df[df['route'].str.upper() == 'ORAL']
-    df = df[df['primary_dosage_form'].str.upper().isin(TARGET_FORMS)]
-    print(f"    Oral tablet formulations: {len(df)}")
+    # Filter out missing route or form
+    df = df.dropna(subset=['route', 'primary_dosage_form'])
+    print(f"    Valid formulations (all routes/forms): {len(df)}")
     
     features_df = pd.read_csv(FEATURES_PATH)
     print(f"\n[1] Loaded: {len(df)} rows, {len(features_df)} API feature vectors")

@@ -1,19 +1,19 @@
 """
 gnn_layers.py — Heterogeneous GNN encoder for ExciPick.
 
-Uses PyG's HeteroConv with SAGEConv per edge type.
+Uses PyG's HeteroConv with GATv2Conv per edge type.
 Each layer: HeteroConv → LayerNorm → ReLU → Dropout (+ residual).
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import HeteroConv, SAGEConv
+from torch_geometric.nn import HeteroConv, GATv2Conv
 
 
 class HeteroGNNEncoder(nn.Module):
     """
-    Multi-layer heterogeneous GNN using SAGEConv per edge type.
+    Multi-layer heterogeneous GNN using GATv2Conv per edge type.
 
     Args:
         metadata: tuple of (node_types, edge_types) from HeteroData.metadata()
@@ -32,10 +32,16 @@ class HeteroGNNEncoder(nn.Module):
         self.norms = nn.ModuleList()
 
         for _ in range(num_layers):
-            # One SAGEConv per edge type
+            # One GATv2Conv per edge type
             conv_dict = {}
             for edge_type in metadata[1]:
-                conv_dict[edge_type] = SAGEConv((-1, -1), hidden_dim)
+                conv_dict[edge_type] = GATv2Conv(
+                    (-1, -1),
+                    hidden_dim,
+                    heads=1,
+                    concat=False,
+                    add_self_loops=False,
+                )
 
             self.convs.append(HeteroConv(conv_dict, aggr="sum"))
 

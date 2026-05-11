@@ -172,7 +172,7 @@ def main():
     uses_dst = [e[1] for e in uses_set]
     uses_edge = torch.tensor([uses_src, uses_dst], dtype=torch.long)
     used_by_edge = torch.tensor([uses_dst, uses_src], dtype=torch.long)
-    print(f"  'uses' edges: {len(uses_set)} unique (api → excipient)")
+    print(f"  'uses' edges: {len(uses_set)} unique (api -> excipient)")
 
     # 5. Build (excipient, cooccurs, excipient) edges — Jaccard
     print("\n[5] Building co-occurrence edges (Jaccard)...")
