@@ -13,8 +13,11 @@ import torch
 import numpy as np
 import pickle
 import argparse
+import csv
 from config import CONFIG
 from model.FULL_MODEL import ExciPickHGNN
+
+ORAL_ONLY_PATH = "Data/oral_only.csv"
 
 
 def load_metadata():
@@ -22,6 +25,31 @@ def load_metadata():
     with open("processed_data.pkl", "rb") as f:
         data = pickle.load(f)
     return data
+
+
+def load_default_from_oral_only():
+    try:
+        with open(ORAL_ONLY_PATH, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            row = next(reader, None)
+    except FileNotFoundError:
+        return None
+
+    if not row:
+        return None
+
+    try:
+        dose_val = float(row.get("dose_mg", ""))
+    except ValueError:
+        dose_val = None
+
+    return {
+        "api": row.get("api_unii") or None,
+        "dose": dose_val,
+        "unit": row.get("denominator_unit") or None,
+        "route": row.get("route") or None,
+        "form": row.get("primary_dosage_form") or None,
+    }
 
 
 def predict_excipients(
@@ -83,7 +111,7 @@ def predict_excipients(
     return predictions
 
 
-def find_ground_truth(data, api_unii, dose_mg, unit, route, form, dose_tol=0.0):
+def find_ground_truth(data, api_unii, dose_mg, unit, route, form, dose_tol=0.0, max_examples=5):
     df = data["df"]
 
     required_cols = {
@@ -111,12 +139,32 @@ def find_ground_truth(data, api_unii, dose_mg, unit, route, form, dose_tol=0.0):
     if dose_tol <= 0:
         exact = candidates[candidates["dose_mg"] == dose_mg]
         if exact.empty:
-            return None, "No exact dose match (set --dose-tol to allow a tolerance)"
+            examples = (
+                candidates["dose_mg"]
+                .drop_duplicates()
+                .sort_values()
+                .head(max_examples)
+                .tolist()
+            )
+            return None, (
+                "No exact dose match (set --dose-tol to allow a tolerance). "
+                f"Example doses: {examples}"
+            )
         candidates = exact
     else:
         candidates = candidates[(candidates["dose_mg"] - dose_mg).abs() <= dose_tol]
         if candidates.empty:
-            return None, "No dose match within tolerance"
+            examples = (
+                candidates["dose_mg"]
+                .drop_duplicates()
+                .sort_values()
+                .head(max_examples)
+                .tolist()
+            )
+            return None, (
+                "No dose match within tolerance. "
+                f"Example doses: {examples}"
+            )
 
     # Use the closest dose if multiple rows
     candidates = candidates.copy()
@@ -128,11 +176,11 @@ def find_ground_truth(data, api_unii, dose_mg, unit, route, form, dose_tol=0.0):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ExciPick HetGNN Inference")
-    parser.add_argument("--api", type=str, default="6CW7F3G59X", help="API UNII code")
-    parser.add_argument("--dose", type=float, default=100.0, help="Dose in mg")
-    parser.add_argument("--unit", type=str, default="1", help="Denominator unit")
-    parser.add_argument("--route", type=str, default="ORAL", help="Route of administration")
-    parser.add_argument("--form", type=str, default="TABLET", help="Dosage form")
+    parser.add_argument("--api", type=str, default=None, help="API UNII code")
+    parser.add_argument("--dose", type=float, default=None, help="Dose in mg")
+    parser.add_argument("--unit", type=str, default=None, help="Denominator unit")
+    parser.add_argument("--route", type=str, default=None, help="Route of administration")
+    parser.add_argument("--form", type=str, default=None, help="Dosage form")
     parser.add_argument("--threshold", type=float, default=0.3, help="Probability threshold")
     parser.add_argument("--model", type=str, default="best_model.pt", help="Model weights path")
     parser.add_argument("--show-gt", action="store_true", help="Print ground-truth excipients")
@@ -145,6 +193,35 @@ if __name__ == "__main__":
         data = load_metadata()
     except FileNotFoundError:
         print("Error: processed_data.pkl not found. Run preprocess.py first.")
+        exit(1)
+
+    defaults = load_default_from_oral_only()
+    if defaults:
+        if args.api is None:
+            args.api = defaults["api"]
+        if args.dose is None:
+            args.dose = defaults["dose"]
+        if args.unit is None:
+            args.unit = defaults["unit"]
+        if args.route is None:
+            args.route = defaults["route"]
+        if args.form is None:
+            args.form = defaults["form"]
+
+    missing_inputs = [
+        name
+        for name, value in {
+            "api": args.api,
+            "dose": args.dose,
+            "unit": args.unit,
+            "route": args.route,
+            "form": args.form,
+        }.items()
+        if value in (None, "")
+    ]
+    if missing_inputs:
+        print(f"Error: missing inputs: {missing_inputs}")
+        print("Provide them via CLI or ensure Data/oral_only.csv has values.")
         exit(1)
 
     vocab_size = len(data["excipient_vocab"])
