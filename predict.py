@@ -16,6 +16,7 @@ import argparse
 import csv
 from config import CONFIG
 from model.FULL_MODEL import ExciPickHGNN
+from incompatibility_engine import IncompatibilityEngine
 
 ORAL_ONLY_PATH = "Data/oral_only.csv"
 
@@ -306,6 +307,12 @@ if __name__ == "__main__":
         print(f"Error loading weights: {e}")
         exit(1)
 
+    # Load incompatibility engine
+    engine = IncompatibilityEngine(
+        handbook_flags_path="incompatibilities_flags.json",
+        features_db_path="excipientsFeaturesDB.csv",
+    )
+
     for idx, row in enumerate(input_rows, start=1):
         print("\n" + "=" * 50)
         if len(input_rows) > 1:
@@ -332,14 +339,21 @@ if __name__ == "__main__":
                 form=row["form"],
                 threshold=args.threshold,
             )
-            pred_names = [name for name, _ in predictions]
+            # Get API SMILES for incompatibility checking
+            api_smiles = None
+            api_rows = data["df"][data["df"]["api_unii"] == row["api"]]
+            if not api_rows.empty:
+                api_smiles = api_rows.iloc[0].get("smiles", None)
+
+            # Rerank with incompatibility engine
+            reranked = engine.rerank(api_smiles, predictions)
+            pred_names = [e["name"] for e in reranked]
 
             print(f"PREDICTED EXCIPIENTS (Threshold >= {args.threshold}):")
-            if not predictions:
+            if not reranked:
                 print("  (No excipients predicted above the threshold)")
             else:
-                for name, prob in predictions:
-                    print(f"  - {name:<30} ({prob:.1%} confidence)")
+                print(engine.format_output(reranked))
 
             if args.show_gt:
                 excipient_ids, err = find_ground_truth(
