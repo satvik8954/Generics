@@ -6,6 +6,7 @@ predicts the most likely excipients for the formulation.
 
 Usage:
     python predict.py --api 6CW7F3G59X --dose 500 --unit 1 --route ORAL --form TABLET
+    python predict.py --api 6CW7F3G59X --dose 500 --unit 1 --route ORAL --form TABLET --show-gt
 """
 
 import torch
@@ -82,6 +83,49 @@ def predict_excipients(
     return predictions
 
 
+def find_ground_truth(data, api_unii, dose_mg, unit, route, form, dose_tol=0.0):
+    df = data["df"]
+
+    required_cols = {
+        "api_unii",
+        "dose_mg",
+        "denominator_unit",
+        "route",
+        "primary_dosage_form",
+        "excipient_ids",
+    }
+    missing_cols = required_cols.difference(df.columns)
+    if missing_cols:
+        return None, f"Missing columns in processed data: {sorted(missing_cols)}"
+
+    candidates = df[
+        (df["api_unii"] == api_unii)
+        & (df["route"] == route)
+        & (df["primary_dosage_form"] == form)
+        & (df["denominator_unit"] == unit)
+    ]
+
+    if candidates.empty:
+        return None, "No matching formulation found for api/route/form/unit"
+
+    if dose_tol <= 0:
+        exact = candidates[candidates["dose_mg"] == dose_mg]
+        if exact.empty:
+            return None, "No exact dose match (set --dose-tol to allow a tolerance)"
+        candidates = exact
+    else:
+        candidates = candidates[(candidates["dose_mg"] - dose_mg).abs() <= dose_tol]
+        if candidates.empty:
+            return None, "No dose match within tolerance"
+
+    # Use the closest dose if multiple rows
+    candidates = candidates.copy()
+    candidates["dose_diff"] = (candidates["dose_mg"] - dose_mg).abs()
+    row = candidates.sort_values("dose_diff").iloc[0]
+
+    return row["excipient_ids"], None
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ExciPick HetGNN Inference")
     parser.add_argument("--api", type=str, default="6CW7F3G59X", help="API UNII code")
@@ -91,6 +135,8 @@ if __name__ == "__main__":
     parser.add_argument("--form", type=str, default="TABLET", help="Dosage form")
     parser.add_argument("--threshold", type=float, default=0.3, help="Probability threshold")
     parser.add_argument("--model", type=str, default="best_model.pt", help="Model weights path")
+    parser.add_argument("--show-gt", action="store_true", help="Print ground-truth excipients")
+    parser.add_argument("--dose-tol", type=float, default=0.0, help="Dose tolerance for GT lookup")
 
     args = parser.parse_args()
 
@@ -155,6 +201,7 @@ if __name__ == "__main__":
             form=args.form,
             threshold=args.threshold,
         )
+        pred_names = [name for name, _ in predictions]
 
         print(f"PREDICTED EXCIPIENTS (Threshold >= {args.threshold}):")
         if not predictions:
@@ -162,6 +209,38 @@ if __name__ == "__main__":
         else:
             for name, prob in predictions:
                 print(f"  - {name:<30} ({prob:.1%} confidence)")
+
+        if args.show_gt:
+            excipient_ids, err = find_ground_truth(
+                data=data,
+                api_unii=args.api,
+                dose_mg=args.dose,
+                unit=args.unit,
+                route=args.route,
+                form=args.form,
+                dose_tol=args.dose_tol,
+            )
+            if err:
+                print(f"\nGROUND TRUTH: {err}")
+            else:
+                id_to_excipient = {v: k for k, v in data["excipient_vocab"].items()}
+                gt_names = [id_to_excipient[eid] for eid in excipient_ids]
+                gt_set = set(gt_names)
+                pred_set = set(pred_names)
+                matched = sorted(gt_set & pred_set)
+
+                print("\nGROUND TRUTH EXCIPIENTS:")
+                for name in sorted(gt_set):
+                    print(f"  - {name}")
+
+                print("\nMATCHED EXCIPIENTS:")
+                if matched:
+                    for name in matched:
+                        print(f"  - {name}")
+                else:
+                    print("  (No matches)")
+
+                print(f"\nMatched {len(matched)}/{len(gt_set)} ground-truth excipients")
 
     except ValueError as e:
         print(f"Input Error: {e}")
