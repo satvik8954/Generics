@@ -52,6 +52,33 @@ def load_default_from_oral_only():
     }
 
 
+def load_defaults_from_oral_only(limit):
+    rows = []
+    try:
+        with open(ORAL_ONLY_PATH, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if len(rows) >= limit:
+                    break
+                try:
+                    dose_val = float(row.get("dose_mg", ""))
+                except ValueError:
+                    dose_val = None
+                rows.append(
+                    {
+                        "api": row.get("api_unii") or None,
+                        "dose": dose_val,
+                        "unit": row.get("denominator_unit") or None,
+                        "route": row.get("route") or None,
+                        "form": row.get("primary_dosage_form") or None,
+                    }
+                )
+    except FileNotFoundError:
+        return []
+
+    return rows
+
+
 def predict_excipients(
     model, graph, data, api_node_mapping, api_unii, dose_mg, unit, route, form, threshold=0.5
 ):
@@ -185,6 +212,12 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="best_model.pt", help="Model weights path")
     parser.add_argument("--show-gt", action="store_true", help="Print ground-truth excipients")
     parser.add_argument("--dose-tol", type=float, default=0.0, help="Dose tolerance for GT lookup")
+    parser.add_argument(
+        "--batch-from-oral",
+        type=int,
+        default=0,
+        help="Run predictions for the first N rows in Data/oral_only.csv",
+    )
 
     args = parser.parse_args()
 
@@ -195,34 +228,51 @@ if __name__ == "__main__":
         print("Error: processed_data.pkl not found. Run preprocess.py first.")
         exit(1)
 
-    defaults = load_default_from_oral_only()
-    if defaults:
-        if args.api is None:
-            args.api = defaults["api"]
-        if args.dose is None:
-            args.dose = defaults["dose"]
-        if args.unit is None:
-            args.unit = defaults["unit"]
-        if args.route is None:
-            args.route = defaults["route"]
-        if args.form is None:
-            args.form = defaults["form"]
+    input_rows = []
+    if args.batch_from_oral > 0:
+        input_rows = load_defaults_from_oral_only(args.batch_from_oral)
+        if not input_rows:
+            print("Error: Data/oral_only.csv not found or empty.")
+            exit(1)
+    else:
+        defaults = load_default_from_oral_only()
+        if defaults:
+            if args.api is None:
+                args.api = defaults["api"]
+            if args.dose is None:
+                args.dose = defaults["dose"]
+            if args.unit is None:
+                args.unit = defaults["unit"]
+            if args.route is None:
+                args.route = defaults["route"]
+            if args.form is None:
+                args.form = defaults["form"]
 
-    missing_inputs = [
-        name
-        for name, value in {
-            "api": args.api,
-            "dose": args.dose,
-            "unit": args.unit,
-            "route": args.route,
-            "form": args.form,
-        }.items()
-        if value in (None, "")
-    ]
-    if missing_inputs:
-        print(f"Error: missing inputs: {missing_inputs}")
-        print("Provide them via CLI or ensure Data/oral_only.csv has values.")
-        exit(1)
+        missing_inputs = [
+            name
+            for name, value in {
+                "api": args.api,
+                "dose": args.dose,
+                "unit": args.unit,
+                "route": args.route,
+                "form": args.form,
+            }.items()
+            if value in (None, "")
+        ]
+        if missing_inputs:
+            print(f"Error: missing inputs: {missing_inputs}")
+            print("Provide them via CLI or ensure Data/oral_only.csv has values.")
+            exit(1)
+
+        input_rows = [
+            {
+                "api": args.api,
+                "dose": args.dose,
+                "unit": args.unit,
+                "route": args.route,
+                "form": args.form,
+            }
+        ]
 
     vocab_size = len(data["excipient_vocab"])
 
@@ -256,68 +306,72 @@ if __name__ == "__main__":
         print(f"Error loading weights: {e}")
         exit(1)
 
-    print("\n" + "=" * 50)
-    print("INPUTS:")
-    print(f"  API UNII : {args.api}")
-    print(f"  Dose     : {args.dose} mg")
-    print(f"  Unit     : {args.unit}")
-    print(f"  Route    : {args.route}")
-    print(f"  Form     : {args.form}")
-    print("=" * 50 + "\n")
-
-    try:
-        predictions = predict_excipients(
-            model=model,
-            graph=graph,
-            data=data,
-            api_node_mapping=api_node_mapping,
-            api_unii=args.api,
-            dose_mg=args.dose,
-            unit=args.unit,
-            route=args.route,
-            form=args.form,
-            threshold=args.threshold,
-        )
-        pred_names = [name for name, _ in predictions]
-
-        print(f"PREDICTED EXCIPIENTS (Threshold >= {args.threshold}):")
-        if not predictions:
-            print("  (No excipients predicted above the threshold)")
+    for idx, row in enumerate(input_rows, start=1):
+        print("\n" + "=" * 50)
+        if len(input_rows) > 1:
+            print(f"INPUTS ({idx}/{len(input_rows)}):")
         else:
-            for name, prob in predictions:
-                print(f"  - {name:<30} ({prob:.1%} confidence)")
+            print("INPUTS:")
+        print(f"  API UNII : {row['api']}")
+        print(f"  Dose     : {row['dose']} mg")
+        print(f"  Unit     : {row['unit']}")
+        print(f"  Route    : {row['route']}")
+        print(f"  Form     : {row['form']}")
+        print("=" * 50 + "\n")
 
-        if args.show_gt:
-            excipient_ids, err = find_ground_truth(
+        try:
+            predictions = predict_excipients(
+                model=model,
+                graph=graph,
                 data=data,
-                api_unii=args.api,
-                dose_mg=args.dose,
-                unit=args.unit,
-                route=args.route,
-                form=args.form,
-                dose_tol=args.dose_tol,
+                api_node_mapping=api_node_mapping,
+                api_unii=row["api"],
+                dose_mg=row["dose"],
+                unit=row["unit"],
+                route=row["route"],
+                form=row["form"],
+                threshold=args.threshold,
             )
-            if err:
-                print(f"\nGROUND TRUTH: {err}")
+            pred_names = [name for name, _ in predictions]
+
+            print(f"PREDICTED EXCIPIENTS (Threshold >= {args.threshold}):")
+            if not predictions:
+                print("  (No excipients predicted above the threshold)")
             else:
-                id_to_excipient = {v: k for k, v in data["excipient_vocab"].items()}
-                gt_names = [id_to_excipient[eid] for eid in excipient_ids]
-                gt_set = set(gt_names)
-                pred_set = set(pred_names)
-                matched = sorted(gt_set & pred_set)
+                for name, prob in predictions:
+                    print(f"  - {name:<30} ({prob:.1%} confidence)")
 
-                print("\nGROUND TRUTH EXCIPIENTS:")
-                for name in sorted(gt_set):
-                    print(f"  - {name}")
-
-                print("\nMATCHED EXCIPIENTS:")
-                if matched:
-                    for name in matched:
-                        print(f"  - {name}")
+            if args.show_gt:
+                excipient_ids, err = find_ground_truth(
+                    data=data,
+                    api_unii=row["api"],
+                    dose_mg=row["dose"],
+                    unit=row["unit"],
+                    route=row["route"],
+                    form=row["form"],
+                    dose_tol=args.dose_tol,
+                )
+                if err:
+                    print(f"\nGROUND TRUTH: {err}")
                 else:
-                    print("  (No matches)")
+                    id_to_excipient = {v: k for k, v in data["excipient_vocab"].items()}
+                    gt_names = [id_to_excipient[eid] for eid in excipient_ids]
+                    gt_set = set(gt_names)
+                    pred_set = set(pred_names)
+                    matched = sorted(gt_set & pred_set)
 
-                print(f"\nMatched {len(matched)}/{len(gt_set)} ground-truth excipients")
+                    print("\nGROUND TRUTH EXCIPIENTS:")
+                    for name in sorted(gt_set):
+                        print(f"  - {name}")
 
-    except ValueError as e:
-        print(f"Input Error: {e}")
+                    print("\nMATCHED EXCIPIENTS:")
+                    if matched:
+                        for name in matched:
+                            print(f"  - {name}")
+                    else:
+                        print("  (No matches)")
+
+                    print(f"\nMatched {len(matched)}/{len(gt_set)} ground-truth excipients")
+
+        except ValueError as e:
+            print(f"Input Error: {e}")

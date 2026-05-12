@@ -23,7 +23,7 @@ from collections import Counter
 # -----------------------------------------------
 # CONFIG
 # -----------------------------------------------
-INPUT_PATH = "Data/mapped_formulations.csv"
+INPUT_PATH = "Data/oral_only.csv"
 FEATURES_PATH = "Data/api_features.csv"
 OUTPUT_PATH = "processed_data.pkl"
 

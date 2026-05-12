@@ -11,10 +11,13 @@ Usage:
 
 import argparse
 import pickle
+import time
 import numpy as np
+import torch
 
 try:
     from xgboost import XGBClassifier
+    from xgboost.core import XGBoostError
 except Exception as exc:
     raise SystemExit(
         "xgboost is required for this baseline. Install with: pip install xgboost"
@@ -22,13 +25,19 @@ except Exception as exc:
 
 try:
     from sklearn.preprocessing import MultiLabelBinarizer
-    from sklearn.multiclass import OneVsRestClassifier
 except Exception as exc:
     raise SystemExit(
         "scikit-learn is required for this baseline. Install with: pip install scikit-learn"
     ) from exc
 
 from metrics import precision_at_k, recall_at_k, f1_at_k, jaccard_at_k
+
+try:
+    from tqdm import tqdm
+except Exception as exc:
+    raise SystemExit(
+        "tqdm is required for progress bars. Install with: pip install tqdm"
+    ) from exc
 
 
 def build_feature_matrix(df):
@@ -55,10 +64,9 @@ def main():
     parser.add_argument("--max-depth", type=int, default=6)
     parser.add_argument("--learning-rate", type=float, default=0.1)
     parser.add_argument("--k", type=int, nargs="+", default=[5, 10, 15])
+    parser.add_argument("--n-jobs", type=int, default=1, help="Parallel workers for OVR/XGBoost")
+    parser.add_argument("--gpu", action="store_true", help="Use GPU if XGBoost has CUDA support")
     args = parser.parse_args()
-
-    with open("processed_data.pkl", "rb") as f:
-        data = pickle.load(f)
 
     with open("split_data.pkl", "rb") as f:
         split_data = pickle.load(f)
@@ -85,8 +93,24 @@ def main():
         y_val = y_val[:, : args.max_labels]
         y_test = y_test[:, : args.max_labels]
 
-    clf = OneVsRestClassifier(
-        XGBClassifier(
+    label_count = y_train.shape[1]
+    if label_count > 500 and args.max_labels == 0:
+        print(
+            f"Warning: training {label_count} one-vs-rest models can take a long time. "
+            "Consider --max-labels or --sample to speed up."
+        )
+
+    tree_method = "gpu_hist" if args.gpu else "hist"
+
+    print(
+        "Training XGBoost baseline... "
+        f"samples={X_train.shape[0]}, features={X_train.shape[1]}, labels={label_count}"
+    )
+    start = time.time()
+    models = []
+    use_gpu = args.gpu
+    for idx in tqdm(range(label_count), desc="Training labels", unit="label"):
+        params = dict(
             n_estimators=args.n_estimators,
             max_depth=args.max_depth,
             learning_rate=args.learning_rate,
@@ -94,19 +118,29 @@ def main():
             colsample_bytree=0.9,
             objective="binary:logistic",
             eval_metric="logloss",
-            tree_method="hist",
+            tree_method="gpu_hist" if use_gpu else "hist",
+            n_jobs=args.n_jobs,
         )
-    )
-
-    print("Training XGBoost baseline...")
-    clf.fit(X_train, y_train)
+        clf = XGBClassifier(**params)
+        try:
+            clf.fit(X_train, y_train[:, idx])
+        except XGBoostError:
+            if use_gpu:
+                print("GPU training failed; retrying remaining labels on CPU.")
+                use_gpu = False
+                clf = XGBClassifier(**{**params, "tree_method": "hist"})
+                clf.fit(X_train, y_train[:, idx])
+            else:
+                raise
+        models.append(clf)
+    elapsed = time.time() - start
+    print(f"Training finished in {elapsed:.1f}s")
 
     print("Scoring...")
-    y_scores = clf.predict_proba(X_test)
-
-    # OneVsRest returns list for multi-label; convert to array
-    if isinstance(y_scores, list):
-        y_scores = np.vstack([p[:, 1] for p in y_scores]).T
+    y_scores = np.zeros((X_test.shape[0], label_count), dtype=np.float32)
+    for idx, model in enumerate(tqdm(models, desc="Scoring labels", unit="label")):
+        probs = model.predict_proba(X_test)
+        y_scores[:, idx] = probs[:, 1]
 
     y_scores_t = torch.tensor(y_scores, dtype=torch.float32)
     y_test_t = torch.tensor(y_test, dtype=torch.float32)
@@ -128,6 +162,4 @@ def main():
 
 
 if __name__ == "__main__":
-    import torch
-
     main()
