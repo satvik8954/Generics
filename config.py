@@ -47,8 +47,8 @@ CONFIG = {
     # ========================
 
     "lr": 5e-4,
-    "batch_size": 64,
-    "epochs": 50,
+    "batch_size": 128,
+    "epochs": 100,
 
     # ========================
     # INFERENCE

@@ -309,8 +309,8 @@ if __name__ == "__main__":
 
     # Load incompatibility engine
     engine = IncompatibilityEngine(
-        handbook_flags_path="incompatibilities_flags.json",
-        features_db_path="excipientsFeaturesDB.csv",
+        handbook_flags_path="Data/incompatibilities_flags.json",
+        features_db_path="Data/excipientsFeaturesDB.csv",
     )
 
     for idx, row in enumerate(input_rows, start=1):

@@ -107,8 +107,8 @@ class IncompatibilityEngine:
         self,
         handbook_flags_path: str = "incompatibilities_flags.json",
         features_db_path: str = "excipientsFeaturesDB.csv",
-        clash_lambda: float = 0.5,
-        pairwise_lambda: float = 0.3,
+        clash_lambda: float = 0.15,
+        pairwise_lambda: float = 0.08,
     ):
         self.clash_lambda = clash_lambda
         self.pairwise_lambda = pairwise_lambda
@@ -348,6 +348,8 @@ class IncompatibilityEngine:
                             entry_b["pairwise_clashes"].append(clash_note_b)
 
         # Compute final score
+        for entry in scored:
+            entry["pairwise_clash_score"] = min(entry["pairwise_clash_score"], 1.0)
         for entry in scored:
             entry["final_score"] = (
                 entry["gnn_score"]

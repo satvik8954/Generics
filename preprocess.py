@@ -23,17 +23,28 @@ from collections import Counter
 # -----------------------------------------------
 # CONFIG
 # -----------------------------------------------
-INPUT_PATH = "Data/oral_only.csv"
+INPUT_PATH = "Data/final.csv"
 FEATURES_PATH = "Data/api_features.csv"
 OUTPUT_PATH = "processed_data.pkl"
 
 MIN_EXCIPIENTS = 2
 MAX_EXCIPIENTS = 30
-EXCIPIENT_MIN_FREQ = 10
+# EXCIPIENT_MIN_FREQ = 10
+# TARGET_FORMS = [
+#     "TABLET", "TABLET, FILM COATED", "TABLET, EXTENDED RELEASE", 
+#     "TABLET, DELAYED RELEASE", "TABLET, FILM COATED, EXTENDED RELEASE"
+# ]
+# TARGET_FORMS = ["TABLET"]
 TARGET_FORMS = [
-    "TABLET", "TABLET, FILM COATED", "TABLET, EXTENDED RELEASE", 
-    "TABLET, DELAYED RELEASE", "TABLET, FILM COATED, EXTENDED RELEASE"
+    "TABLET",
+    "TABLET, FILM COATED", 
+    "TABLET, EXTENDED RELEASE",
+    "TABLET, DELAYED RELEASE",
+    "TABLET, FILM COATED, EXTENDED RELEASE",
+    "TABLET, COATED",
+    "CAPSULE",  # add capsules back
 ]
+EXCIPIENT_MIN_FREQ = 5
 
 DESCRIPTOR_NAMES = [
     "MolWt", "MolLogP", "TPSA", "NumHDonors", "NumHAcceptors",
@@ -126,6 +137,8 @@ def main():
 
     # Pack descriptor columns into a single list column
     df["api_descriptors"] = df[DESCRIPTOR_NAMES].values.tolist()
+    df = df[df["primary_dosage_form"].isin(TARGET_FORMS)]
+    print(f"    After form filter: {len(df)} rows")
 
     # 5. Normalize dose_mg (log + z-score)
     df["log_dose_mg"] = np.log10(df["dose_mg"].clip(lower=1e-9) + 1e-9)

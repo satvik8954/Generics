@@ -29,7 +29,7 @@ def assign_clusters(df, threshold=0.6):
     Uses 'unii' as the unique API identifier and 'smiles' for fingerprints.
     """
     # 1. Extract unique APIs and their SMILES
-    apis = df[["unii", "smiles"]].drop_duplicates().dropna(subset=["smiles"]).reset_index(drop=True)
+    apis = df[["api_unii", "smiles"]].drop_duplicates().dropna(subset=["smiles"]).reset_index(drop=True)
     apis["fp"] = apis["smiles"].apply(get_morgan_fp)
 
     # 2. Build adjacency list for APIs with Tanimoto similarity >= threshold
@@ -59,7 +59,7 @@ def assign_clusters(df, threshold=0.6):
             curr_cluster += 1
 
     apis["cluster_id"] = cluster_ids
-    return df.merge(apis[["unii", "cluster_id"]], on="unii", how="left")
+    return df.merge(apis[["api_unii", "cluster_id"]], on="api_unii", how="left")
 
 
 def split_by_api_cluster(df, seed=42):
@@ -72,7 +72,7 @@ def split_by_api_cluster(df, seed=42):
     df = assign_clusters(df)
 
     # Fill remaining (no SMILES) with their raw UNII as a fallback cluster
-    df["cluster_id"] = df["cluster_id"].fillna(df["unii"])
+    df["cluster_id"] = df["cluster_id"].fillna(df["api_unii"])
 
     n_clusters = df["cluster_id"].nunique()
     print(f"  Found {n_clusters} API clusters")
@@ -97,7 +97,7 @@ def split_by_api_cluster(df, seed=42):
 if __name__ == "__main__":
     import pickle
 
-    with open("processed_data.pkl", "rb") as f:
+    with open("preprocessed_data.pkl", "rb") as f:
         data = pickle.load(f)
 
     df = data["df"]
