@@ -18,6 +18,7 @@ import pandas as pd
 import numpy as np
 import json
 import pickle
+import re
 from collections import Counter
 
 # -----------------------------------------------
@@ -55,12 +56,35 @@ DESCRIPTOR_NAMES = [
 ]
 
 
+def normalize_excipient_name(name):
+    if not isinstance(name, str):
+        return ""
+
+    cleaned = name.upper().strip()
+
+    if "," in cleaned:
+        parts = [p.strip() for p in cleaned.split(",")]
+        if len(parts) == 2:
+            cleaned = f"{parts[1]} {parts[0]}"
+
+    cleaned = re.sub(r"\s*\(.*?\)", "", cleaned)
+    cleaned = re.sub(r"\s+[K]?\d+(\.\d+)?\s*$", "", cleaned)
+    cleaned = re.sub(r",?\s*(UNSPECIFIED|TYPE [A-Z])$", "", cleaned)
+
+    return cleaned.strip()
+
+
 def parse_excipient_names(json_str):
     """Extract excipient names from inactive_ingredients JSON string."""
     try:
         ingredients = json.loads(json_str)
-        names = list(set(item["name"] for item in ingredients))
-        return names
+        names = list(
+            set(
+                normalize_excipient_name(item.get("name", ""))
+                for item in ingredients
+            )
+        )
+        return [name for name in names if name]
     except Exception:
         return []
 

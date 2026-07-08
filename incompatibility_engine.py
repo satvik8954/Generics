@@ -24,7 +24,7 @@ import json
 import os
 import pandas as pd
 from rdkit import Chem
-from rdkit.Chem import Descriptors
+from rdkit.Chem import Descriptorsrevi
 
 # ─────────────────────────────────────────────
 # CLASH MATRIX
