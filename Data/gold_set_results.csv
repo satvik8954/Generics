@@ -1,0 +1,15 @@
+formulation_id,formulation_name,dosage_form,api_unii,excipient_name,unii,unii_match_type,textbook_role_raw,textbook_role_canonical,predicted_role,confidence,verdict
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,Crospovidone,2S7830E561,exact,Disintegrant,disintegrant,disintegrant,0.9994691014289856,CORRECT
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,Magnesium stearate,70097M6I30,exact,Lubricant,lubricant,lubricant,0.9999152421951294,CORRECT
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,Mannitol,3OWL53L36A,exact,Sweetener,sweetening_agent,sweetening_agent,0.9793382287025452,CORRECT
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,"Silicon dioxide, colloidal",ETJ7Z6XBU4,substring,Glidant,glidant,glidant,0.9990818500518799,CORRECT
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,Sucralose,96K6UQ3ZD4,exact,Sweetener,sweetening_agent,sweetening_agent,0.9996920824050903,CORRECT
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Glycerin,PDC6A3C0OX,exact,"Sweetener, cosolvent",sweetening_agent|solvent,preservative,0.9996706247329712,MISMATCH
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Methylparaben,A2I8C7HI9T,exact,Antimicrobial preservative,preservative,preservative,0.9999569654464722,CORRECT
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Propylparaben,Z8IX2SC1OH,exact,Antimicrobial preservative,preservative,preservative,0.9999569654464722,CORRECT
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Sorbitol,506T60A25R,exact,"Sweetener, cosolvent",sweetening_agent|solvent,sweetening_agent,0.9994294047355652,CORRECT
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Purified water,059QF0KO0R,substring,Solvent,solvent,solvent,0.9982964396476746,CORRECT
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Sucrose,C151H8M554,exact,Sweetener,sweetening_agent,sweetening_agent,0.7169202566146851,CORRECT
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,FD&C Red No. 40,WZB9127XOA,exact,Dye,,,0.0,UNTESTABLE (no HPE capability data)
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Cherry flavor,BUC5I9595W,substring,Flavor,flavoring_agent,,0.0,UNTESTABLE (no HPE capability data)
+TEST001,Metformin IR Tablet,TABLET,18YJ200F1S,Microcrystalline Cellulose,OP1R32D61U,exact,Filler,filler,filler,0.9987236857414246,CORRECT

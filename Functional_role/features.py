@@ -98,3 +98,33 @@ def build_feature_vector(target_unii: str, dosage_form: str, other_uniis: list,
 
 
 FEATURE_DIM = NUM_ROLES + 6 + NUM_ROLES  # + NUM_API_FEATURES if api_to_feats is used
+
+# Feature block boundaries, used to scale ONLY the co-occurrence count block.
+# [0:NUM_ROLES] capability mask and [NUM_ROLES:NUM_ROLES+6] dosage buckets are
+# already 0/1 binary; [NUM_ROLES+6+NUM_ROLES:] API descriptors are already
+# z-score normalized in load_api_features(). The co-occurrence block is the
+# only one left as raw, unbounded integer counts (observed range 0-11 on the
+# real dataset) sitting next to those — this rescales it to mean-0/std-1 too.
+COOCC_START = NUM_ROLES + 6
+COOCC_END = NUM_ROLES + 6 + NUM_ROLES
+
+
+def fit_coocc_scaler(X: np.ndarray):
+    """Fits a StandardScaler on the co-occurrence block ONLY, on TRAIN rows
+    only (call this after the train/val split, on X_train, to avoid leaking
+    val statistics into the scaler)."""
+    from sklearn.preprocessing import StandardScaler
+    scaler = StandardScaler()
+    scaler.fit(X[:, COOCC_START:COOCC_END])
+    return scaler
+
+
+def apply_coocc_scaler(X: np.ndarray, scaler) -> np.ndarray:
+    """Returns a COPY of X with the co-occurrence block transformed by
+    `scaler`; every other block (capability mask, dosage buckets, API
+    descriptors) is left untouched. Use this identically at train time,
+    eval time, and inference time (predict.py) so features always match
+    what the model was actually trained on."""
+    X = X.copy()
+    X[:, COOCC_START:COOCC_END] = scaler.transform(X[:, COOCC_START:COOCC_END])
+    return X

@@ -82,6 +82,33 @@ def allowed_roles_for_form(form: str) -> set:
     return allowed
 
 
+def form_bucket(form: str) -> str:
+    """
+    Collapses a raw dosage-form string into one of a small number of
+    coarse buckets, used to keep empirical priors from mixing e.g.
+    'mannitol as filler in tablets' with 'mannitol as sweetener in ODTs'
+    into one misleading number.
+    """
+    f = form.upper()
+    is_liquid = any(k in f for k in ["SOLUTION", "SUSPENSION", "SYRUP", "ELIXIR",
+                                     "LIQUID", "CONCENTRATE", "RINSE"])
+    is_chew_odt = ("CHEWABLE" in f) or ("ORALLY DISINTEGRATING" in f)
+    is_solid = (("TABLET" in f) or ("CAPSULE" in f) or ("PELLET" in f)
+                or ("GRANULE" in f and "SUSPENSION" not in f)
+                or ("POWDER" in f and "SUSPENSION" not in f and "SOLUTION" not in f))
+    # liquid and chewable/ODT forms are merged into one bucket: both share
+    # the same real behavior for versatile excipients (mannitol/sorbitol/
+    # sucrose act as sweeteners/mouthfeel agents in both), and keeping them
+    # separate fragments the already-sparse pass1 evidence for each so badly
+    # that chewable/ODT ends up with ~0 samples and falls through to the
+    # same tablet-dominated global number anyway — defeating the point.
+    if is_liquid or is_chew_odt:
+        return "liquid_or_chewable"
+    if is_solid:
+        return "solid"
+    return "other"
+
+
 def dosage_form_bucket_features(form: str):
     """
     Small fixed-size numeric summary of a dosage-form string, used as a

@@ -18,7 +18,7 @@ import numpy as np
 
 from config import MODEL_PATH, ROLE_NAMES, NUM_ROLES, EXCLUSIVE_ROLES
 from roles import build_unii_to_roles
-from features import build_feature_vector, load_api_features
+from features import build_feature_vector, load_api_features, apply_coocc_scaler
 
 
 def get_probs(clf, label_encoder, X):
@@ -40,6 +40,7 @@ def predict_formulation(dosage_form: str, excipient_uniis: list, api_unii: str =
         saved = pickle.load(f)
     clf = saved["model"]
     label_encoder = saved["label_encoder"]
+    coocc_scaler = saved["coocc_scaler"]
 
     if unii_to_roles is None:
         unii_to_roles = build_unii_to_roles()
@@ -53,6 +54,7 @@ def predict_formulation(dosage_form: str, excipient_uniis: list, api_unii: str =
         others = [u for u in excipient_uniis if u != unii]
         feats = build_feature_vector(unii, dosage_form, others, unii_to_roles,
                                       api_unii=api_unii, api_to_feats=api_to_feats).reshape(1, -1)
+        feats = apply_coocc_scaler(feats, coocc_scaler)
         cap_mask = feats[0, :NUM_ROLES]
         if cap_mask.sum() == 0:
             per_unii_probs[unii] = None  # no known capability at all

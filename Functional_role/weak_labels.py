@@ -29,7 +29,7 @@ from scipy.optimize import linear_sum_assignment
 from config import (ORAL_CSV, PICKLE_PATH, HIGH_CONF_CSV_PATH, PASS2_CSV_PATH,
                      ROLE_NAMES, EXCLUSIVE_ROLES, MIN_UNII_COUNT,
                      GENERIC_ROLES, GENERIC_ROLE_PENALTY)
-from roles import build_unii_to_roles, allowed_roles_for_form
+from roles import build_unii_to_roles, allowed_roles_for_form, form_bucket
 
 
 def load_formulations():
@@ -76,7 +76,7 @@ def pass1_unambiguous(formulations, unii_to_roles):
 
         results.append({
             "row_idx": f["row_idx"], "api_unii": f["api_unii"],
-            "dosage_form": f["dosage_form"],
+            "dosage_form": f["dosage_form"], "bucket": form_bucket(f["dosage_form"]),
             "assignments": assignments, "remaining": remaining,
         })
 
@@ -89,31 +89,64 @@ def pass1_unambiguous(formulations, unii_to_roles):
 def estimate_priors(results):
     """
     Returns (prior_fn, sample_count_fn).
-    prior_fn(unii, role) -> smoothed P(role | unii), falling back to the
-        global role prior if unii has fewer than MIN_UNII_COUNT Pass-1
-        occurrences.
-    sample_count_fn(unii) -> how many Pass-1 occurrences back this excipient's
-        prior (useful diagnostic to attach to output rows).
+
+    prior_fn(unii, role, bucket) -> smoothed P(role | unii, bucket), with a
+        3-level fallback chain:
+          1. (unii, bucket)-specific prior, if that combo has
+             >= MIN_UNII_COUNT Pass-1 occurrences (real, dosage-form-aware
+             evidence for THIS excipient in THIS kind of formulation)
+          2. unii-level prior across ALL buckets combined, if that has
+             >= MIN_UNII_COUNT occurrences (some evidence for this
+             excipient, just not bucket-specific)
+          3. global role prior (no real evidence for this excipient at all)
+
+    This exists because a single unii-level prior silently mixes e.g.
+    "mannitol as filler in tablets" (hundreds of occurrences) with
+    "mannitol as sweetener in liquids/ODTs" (a couple dozen) into one
+    number that's dominated by whichever dosage form is more common
+    overall — wrongly overriding the sweetener signal even when scoring
+    a liquid/ODT formulation specifically.
+
+    sample_count_fn(unii, bucket=None) -> how many Pass-1 occurrences back
+        this excipient's prior at the given bucket (or across all buckets
+        if bucket=None) — diagnostic, also used for the GENERIC_ROLES
+        penalty check.
     """
+    unii_bucket_role_counts = defaultdict(lambda: defaultdict(Counter))
     unii_role_counts = defaultdict(Counter)
     global_role_counts = Counter()
     for r in results:
+        bucket = r["bucket"]
         for a in r["assignments"]:
+            unii_bucket_role_counts[a["unii"]][bucket][a["role"]] += 1
             unii_role_counts[a["unii"]][a["role"]] += 1
             global_role_counts[a["role"]] += 1
     total = sum(global_role_counts.values()) or 1
     global_prior = {role: count / total for role, count in global_role_counts.items()}
     num_roles = len(ROLE_NAMES)
 
-    def prior(unii, role):
+    def prior(unii, role, bucket):
+        # Level 1: bucket-specific
+        bucket_counts = unii_bucket_role_counts.get(unii, {}).get(bucket)
+        total_ub = sum(bucket_counts.values()) if bucket_counts else 0
+        if total_ub >= MIN_UNII_COUNT:
+            role_count = bucket_counts.get(role, 0)
+            return (role_count + 1) / (total_ub + num_roles)
+
+        # Level 2: unii-level, all buckets combined
         counts = unii_role_counts.get(unii)
         total_u = sum(counts.values()) if counts else 0
-        if total_u < MIN_UNII_COUNT:
-            return global_prior.get(role, 1e-6)
-        role_count = counts.get(role, 0)
-        return (role_count + 1) / (total_u + num_roles)  # Laplace smoothing
+        if total_u >= MIN_UNII_COUNT:
+            role_count = counts.get(role, 0)
+            return (role_count + 1) / (total_u + num_roles)
 
-    def sample_count(unii):
+        # Level 3: global fallback
+        return global_prior.get(role, 1e-6)
+
+    def sample_count(unii, bucket=None):
+        if bucket is not None:
+            bucket_counts = unii_bucket_role_counts.get(unii, {}).get(bucket)
+            return sum(bucket_counts.values()) if bucket_counts else 0
         counts = unii_role_counts.get(unii)
         return sum(counts.values()) if counts else 0
 
@@ -127,15 +160,29 @@ def pass2_optimal(results, prior_fn, sample_count_fn):
     of greedily walking a single sorted list — this avoids the "loser gets
     shoved into whatever's left" failure mode.
 
-    Step 2: whatever's left (excipients with no exclusive role, or who lost
-    the Hungarian competition) gets the best remaining candidate role
-    (usually non-exclusive), with a penalty applied to GENERIC_ROLES unless
-    there's excipient-specific evidence for it.
+    Before entering Hungarian, each excipient's best EXCLUSIVE-role prior is
+    compared against its own best NON-exclusive-role prior. If the
+    non-exclusive alternative scores higher, the excipient opts out of the
+    exclusive-role competition entirely instead of being forced to bid on a
+    role it's actually unlikely to hold. Without this, an excipient with
+    only one (low-probability) exclusive candidate — e.g. mannitol, which is
+    usually a sweetener (52%) but only rarely a filler (2%) in liquid/ODT
+    formulations — gets dragged into Hungarian anyway just because it HAS an
+    eligible exclusive slot, often "winning" it by default (no one else
+    wants it), producing a confidently wrong label. Opting out lets it be
+    scored honestly in Step 2 instead, where its real best role can win.
+
+    Step 2: whatever's left (excipients with no exclusive role, who opted
+    out, or who lost the Hungarian competition) gets the best remaining
+    candidate role, with a penalty applied to GENERIC_ROLES unless there's
+    excipient-specific evidence for it.
     """
     n_pass2 = 0
+    n_opted_out = 0
     for r in results:
         if not r["remaining"]:
             continue
+        bucket = r["bucket"]
         remaining = r["remaining"]
         excipients = list(remaining.keys())
         filled_exclusive_roles = {a["role"] for a in r["assignments"] if a["role"] in EXCLUSIVE_ROLES}
@@ -143,7 +190,23 @@ def pass2_optimal(results, prior_fn, sample_count_fn):
         # ---- Step 1: Hungarian assignment for exclusive-role slots ----
         exclusive_cands = {u: (remaining[u] & EXCLUSIVE_ROLES) - filled_exclusive_roles
                             for u in excipients}
-        E = [u for u in excipients if exclusive_cands[u]]
+
+        # opt-out check: only let an excipient into Hungarian if its best
+        # exclusive-role score actually beats its best non-exclusive score
+        E = []
+        for u in excipients:
+            excl = exclusive_cands[u]
+            if not excl:
+                continue  # no exclusive candidate at all -> Step 2 by default
+            non_excl = remaining[u] - EXCLUSIVE_ROLES
+            best_excl_score = max(prior_fn(u, role, bucket) for role in excl)
+            best_non_excl_score = (max(prior_fn(u, role, bucket) for role in non_excl)
+                                    if non_excl else -1.0)
+            if best_non_excl_score > best_excl_score:
+                n_opted_out += 1
+                continue  # opted out -> handled entirely in Step 2
+            E.append(u)
+
         R = sorted({role for u in E for role in exclusive_cands[u]})
 
         matched = {}  # unii -> (role, raw_score)
@@ -154,7 +217,7 @@ def pass2_optimal(results, prior_fn, sample_count_fn):
             for i, u in enumerate(E):
                 for j, role in enumerate(R):
                     if role in exclusive_cands[u]:
-                        score = prior_fn(u, role)
+                        score = prior_fn(u, role, bucket)
                         raw_scores[i, j] = score
                         cost[i, j] = -score
             row_ind, col_ind = linear_sum_assignment(cost)
@@ -164,7 +227,7 @@ def pass2_optimal(results, prior_fn, sample_count_fn):
 
         for u, (role, raw_score) in matched.items():
             n_candidates = len(remaining[u])
-            n_samples = sample_count_fn(u)
+            n_samples = sample_count_fn(u, bucket)
             r["assignments"].append({
                 "unii": u, "role": role,
                 "confidence": float(raw_score / n_candidates),
@@ -175,7 +238,8 @@ def pass2_optimal(results, prior_fn, sample_count_fn):
             filled_exclusive_roles.add(role)
             n_pass2 += 1
 
-        # ---- Step 2: leftover excipients -> best remaining candidate,
+        # ---- Step 2: leftover excipients (no exclusive candidate, opted
+        #      out, or lost Hungarian) -> best remaining candidate role,
         #      with a penalty on generic/fallback-prone roles ----
         new_remaining = {}
         for u in excipients:
@@ -186,10 +250,10 @@ def pass2_optimal(results, prior_fn, sample_count_fn):
                 new_remaining[u] = remaining[u]
                 continue
 
-            n_samples = sample_count_fn(u)
+            n_samples = sample_count_fn(u, bucket)
             best_role, best_score, best_raw = None, -1.0, 0.0
             for role in cands:
-                raw_score = prior_fn(u, role)
+                raw_score = prior_fn(u, role, bucket)
                 score = raw_score / len(cands)
                 if role in GENERIC_ROLES and n_samples < MIN_UNII_COUNT:
                     score *= GENERIC_ROLE_PENALTY
@@ -208,6 +272,8 @@ def pass2_optimal(results, prior_fn, sample_count_fn):
         r["remaining"] = new_remaining
 
     print(f"  Pass 2: {n_pass2} additional labels via optimal exclusive-slot assignment + fallback")
+    print(f"  ({n_opted_out} excipient-formulation pairs opted out of exclusive-role "
+          f"competition because their non-exclusive alternative scored higher)")
 
 
 def build_weak_labels():

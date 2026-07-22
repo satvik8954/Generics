@@ -14,7 +14,13 @@ from features import build_feature_vector, load_formulation_excipients, load_api
 def build_dataset(include_pass2: bool = False, pass2_confidence_threshold: float = 0.0,
                    use_api_features: bool = True):
     """
-    Returns (X, y, sample_weight, unii_to_roles, formulation_excipients)
+    Returns (X, y, sample_weight, groups, unii_to_roles, formulation_excipients)
+
+    groups[i] = the row_idx (formulation id) that example i came from. Use
+    this with a grouped split (e.g. StratifiedGroupKFold) instead of a plain
+    train_test_split, so that two excipients from the SAME formulation never
+    get split across train/val — otherwise co-occurrence features let val
+    rows leak information about formulations the model already saw in train.
 
     include_pass2: if True, also include pass2 rows (filtered by
         pass2_confidence_threshold) with sample_weight = confidence.
@@ -46,7 +52,7 @@ def build_dataset(include_pass2: bool = False, pass2_confidence_threshold: float
         df = pd.concat([df, df2[df.columns]], ignore_index=True)
 
     print(f"Building feature matrix for {len(df)} examples...")
-    X, y, w = [], [], []
+    X, y, w, groups = [], [], [], []
     for _, row in df.iterrows():
         other_uniis = formulation_excipients.get(row["row_idx"], [])
         feats = build_feature_vector(row["excipient_unii"], row["dosage_form"],
@@ -55,10 +61,12 @@ def build_dataset(include_pass2: bool = False, pass2_confidence_threshold: float
         X.append(feats)
         y.append(ROLE_TO_IDX[row["role"]])
         w.append(row["sample_weight"])
+        groups.append(row["row_idx"])
 
     X = np.array(X, dtype=np.float32)
     y = np.array(y, dtype=np.int64)
     w = np.array(w, dtype=np.float32)
+    groups = np.array(groups)
     print(f"X shape: {X.shape}, y shape: {y.shape}")
 
-    return X, y, w, unii_to_roles, formulation_excipients
+    return X, y, w, groups, unii_to_roles, formulation_excipients

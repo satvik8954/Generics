@@ -27,7 +27,7 @@ from sklearn.metrics import accuracy_score, f1_score, classification_report
 
 from config import MODEL_PATH, PASS2_CSV_PATH, ROLE_NAMES, NUM_ROLES
 from roles import build_unii_to_roles
-from features import build_feature_vector, load_formulation_excipients, load_api_features
+from features import build_feature_vector, load_formulation_excipients, load_api_features, apply_coocc_scaler
 
 
 def get_probs(clf, label_encoder, X):
@@ -62,7 +62,8 @@ def main():
         saved = pickle.load(f)
     clf, model_type = saved["model"], saved["model_type"]
     label_encoder = saved["label_encoder"]
-    X_val, y_val_encoded = saved["X_val"], saved["y_val"]
+    coocc_scaler = saved["coocc_scaler"]
+    X_val, y_val_encoded = saved["X_val"], saved["y_val"]  # already scaled when saved by train.py
     y_val = label_encoder.inverse_transform(y_val_encoded)  # back to original ROLE_TO_IDX space
 
     capability_masks = X_val[:, :NUM_ROLES]
@@ -110,6 +111,7 @@ def main():
         feats = build_feature_vector(row["excipient_unii"], row["dosage_form"],
                                       other_uniis, unii_to_roles,
                                       api_unii=row["api_unii"], api_to_feats=api_to_feats).reshape(1, -1)
+        feats = apply_coocc_scaler(feats, coocc_scaler)
         if feats[0, :NUM_ROLES].sum() == 0:
             continue
         p = get_probs(clf, label_encoder, feats)[0]
