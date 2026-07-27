@@ -1,0 +1,39 @@
+formulation_id,formulation_name,dosage_form,api_unii,excipient_name,textbook_role
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Microcrystalline cellulose,Filler
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Polysorbate 80,Surfactant
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Sodium lauryl sulfate,Surfactant
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Crospovidone,Disintegrant
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Hypromellose,Binder
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Hydroxypropyl cellulose,Coating agent
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Sodium carbonate,Alkalizing agent
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Purified water,Solvent
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Talc,Lubricant
+F4,Cefixime Oral Suspension,ORAL SUSPENSION,XZ7BG04GJX,Xanthan gum,Thickening agent
+F4,Cefixime Oral Suspension,ORAL SUSPENSION,XZ7BG04GJX,Sodium benzoate,Preservative
+F4,Cefixime Oral Suspension,ORAL SUSPENSION,XZ7BG04GJX,Colloidal silicon dioxide,Dispersing agent
+F4,Cefixime Oral Suspension,ORAL SUSPENSION,XZ7BG04GJX,Strawberry flavor,Flavor
+F4,Cefixime Oral Suspension,ORAL SUSPENSION,XZ7BG04GJX,Sucrose,"Filler, Sweetener"
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH ,Propylene glycol,Cosolvent
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH ,Ethanol (95%),Cosolvent
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH ,Polyethylene glycol 400,"Cosolvent, Thickening agent"
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH ,Monobasic sodium phosphate,Not explicitly stated
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH ,Sodium saccharin,Sweetener
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH ,Flavorants,Flavor
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH ,FD&C Red,Dye
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH ,Purified water,Vehicle
+F6,Omeprazole Delayed-Release Capsule,"CAPSULE, DELAYED RELEASE",KG60484QX9,Povidone (Plasdone K90),Binder
+F6,Omeprazole Delayed-Release Capsule,"CAPSULE, DELAYED RELEASE",KG60484QX9,Sodium lauryl sulfate,Surfactant
+F6,Omeprazole Delayed-Release Capsule,"CAPSULE, DELAYED RELEASE",KG60484QX9,Lactose anhydrous,Filler
+F6,Omeprazole Delayed-Release Capsule,"CAPSULE, DELAYED RELEASE",KG60484QX9,Disodium phosphate,Alkalizing agent
+F6,Omeprazole Delayed-Release Capsule,"CAPSULE, DELAYED RELEASE",KG60484QX9,Purified water,Solvent
+F7,Ambroxol HCl Cough Syrup (Formulation A),SYRUP,CC995ZMV90,Benzoic acid,Preservative
+F7,Ambroxol HCl Cough Syrup (Formulation A),SYRUP,CC995ZMV90,Hydroxyethylcellulose,Thickening agent
+F7,Ambroxol HCl Cough Syrup (Formulation A),SYRUP,CC995ZMV90,Sucralose,Sweetener
+F7,Ambroxol HCl Cough Syrup (Formulation A),SYRUP,CC995ZMV90,Flavourings,Flavor
+F7,Ambroxol HCl Cough Syrup (Formulation A),SYRUP,CC995ZMV90,Water,Solvent
+F8,Ambroxol HCl Cough Syrup (Formulation B),SYRUP,CC995ZMV90,Benzoic acid,Preservative
+F8,Ambroxol HCl Cough Syrup (Formulation B),SYRUP,CC995ZMV90,Acesulfame potassium,Sweetener
+F8,Ambroxol HCl Cough Syrup (Formulation B),SYRUP,CC995ZMV90,Sorbitol (70% solution),Not explicitly stated
+F8,Ambroxol HCl Cough Syrup (Formulation B),SYRUP,CC995ZMV90,Glycerol (85% solution),Not explicitly stated
+F8,Ambroxol HCl Cough Syrup (Formulation B),SYRUP,CC995ZMV90,Flavourings,Flavor
+F8,Ambroxol HCl Cough Syrup (Formulation B),SYRUP,CC995ZMV90,Water,Solvent

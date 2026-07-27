@@ -65,17 +65,31 @@ def allowed_roles_for_form(form: str) -> set:
     is_modified_release = any(k in f for k in ["EXTENDED RELEASE", "DELAYED RELEASE", "SUSTAINED"])
     is_chewable_or_odt = ("CHEWABLE" in f) or ("ORALLY DISINTEGRATING" in f)
 
-    if not is_solid:
-        allowed -= {"binder", "disintegrant", "lubricant", "glidant", "granulation_aid"}
-        if is_liquid:
-            allowed -= {"filler"}
+    # Dosage forms that match NEITHER solid nor liquid keywords (e.g. "KIT",
+    # combo-pack labels) are unclassifiable, not "confirmed neither" — treat
+    # them permissively (keep the full solid+liquid role set) instead of
+    # stripping both solid-only AND liquid-only roles. The old behavior let
+    # e.g. Talc's capability {lubricant, filler, glidant} collapse to just
+    # {filler} for "KIT" formulations, producing a confident Pass-1 label
+    # that was a classification artifact, not real evidence — and since Talc
+    # had zero real evidence anywhere else, that artifact became its global
+    # fallback identity, wrongly overriding its correct `lubricant` role in
+    # every real tablet formulation afterward (verified: 122/123 of Talc's
+    # only real training evidence came from exactly this KIT-artifact path).
+    is_unclassified = not is_solid and not is_liquid
+
+    if not is_unclassified:
+        if not is_solid:
+            allowed -= {"binder", "disintegrant", "lubricant", "glidant", "granulation_aid"}
+            if is_liquid:
+                allowed -= {"filler"}
+        if not is_liquid:
+            allowed -= {"solvent", "sweetening_agent", "flavoring_agent", "buffering_agent",
+                        "suspending_thickening_agent", "humectant"}
     if not is_coated:
         allowed -= {"coating_agent", "plasticizer"}
     if not is_modified_release:
         allowed -= {"controlled_release"}
-    if not is_liquid:
-        allowed -= {"solvent", "sweetening_agent", "flavoring_agent", "buffering_agent",
-                    "suspending_thickening_agent", "humectant"}
     if is_chewable_or_odt:
         allowed |= {"sweetening_agent", "flavoring_agent"}
 

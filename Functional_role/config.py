@@ -8,9 +8,9 @@ Task B (formulation-level excipient role assignment) pipeline.
 # ─────────────────────────────────────────────
 \
 
-FUNCTIONAL_CSV = "data/functional_categories_excipients_FILLED_1.csv"
-UNII_CSV       = "data/excipients_by_unii.csv"
-ORAL_CSV       = "data/oral_only.csv"
+FUNCTIONAL_CSV = "Data/functional_categories_excipients_FILLED_1.csv"
+UNII_CSV       = "Data/excipients_by_unii.csv"
+ORAL_CSV       = "Data/oral_only.csv"
 
 OUTPUT_DIR          = "outputs"
 PICKLE_PATH         = "weak_role_labels.pkl"
@@ -19,7 +19,7 @@ PASS2_CSV_PATH      = f"{OUTPUT_DIR}/weak_labels_pass2.csv"
 MODEL_PATH          = f"{OUTPUT_DIR}/task_b_model.pkl"
 
 # Precomputed RDKit descriptors per API, keyed by api_unii
-API_FEATURES_CSV = "data/api_features.csv"
+API_FEATURES_CSV = "Data/api_features.csv"
 API_FEATURE_COLS = [
     "MolWt", "MolLogP", "TPSA", "NumHDonors", "NumHAcceptors",
     "NumRotatableBonds", "NumAromaticRings", "NumAliphaticRings", "RingCount",
@@ -83,6 +83,19 @@ EXCLUSIVE_ROLES = {
     "binder", "filler", "disintegrant", "lubricant", "glidant",
     "coating_agent", "controlled_release", "solvent",
 }
+
+# how many excipients can simultaneously hold each exclusive role in one
+# formulation. Default is 1 (true one-winner-takes-all). lubricant and
+# glidant are relaxed to 2, since combination systems are common real
+# pharmaceutical practice (e.g. magnesium stearate + talc as a dual
+# lubricant/anti-adherent system) — with capacity 1, an excipient with a
+# near-deterministic, overwhelming claim on a role (e.g. Mg Stearate:
+# 99.68% confidence, 7159 real samples) permanently locks out any other
+# excipient from ever winning that role in training data, even when the
+# textbook ground truth says both are correct simultaneously.
+ROLE_CAPACITY = {role: 1 for role in EXCLUSIVE_ROLES}
+ROLE_CAPACITY["lubricant"] = 2
+ROLE_CAPACITY["glidant"] = 2
 
 # minimum Pass 1 occurrences required before trusting an excipient-specific
 # prior over the global fallback prior (see weak_labels.py estimate_priors)

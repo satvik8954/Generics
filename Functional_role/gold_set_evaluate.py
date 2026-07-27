@@ -45,8 +45,8 @@ from roles import build_unii_to_roles
 from features import load_api_features
 from predict import predict_formulation
 
-GOLD_INPUT_PATH = "data/gold_set_formulations.csv"
-GOLD_RESULTS_PATH = "data/gold_set_results.csv"
+GOLD_INPUT_PATH = "Data/gold_set_formulations_new.csv"
+GOLD_RESULTS_PATH = "Data/gold_set_results_new.csv"
 
 # Maps free-text textbook wording -> canonical role names. Separate from
 # ROLE_TAXONOMY (which maps raw HPE monograph category strings) because
@@ -159,8 +159,7 @@ def map_textbook_roles(text: str):
 
 
 def evaluate_gold_set():
-    if not os.path.exists(GOLD_INPUT_PATH):
-        generate_starter_template()
+   
 
     gold = pd.read_csv(GOLD_INPUT_PATH)
 

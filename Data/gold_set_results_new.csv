@@ -1,0 +1,39 @@
+formulation_id,formulation_name,dosage_form,api_unii,excipient_name,unii,unii_match_type,textbook_role_raw,textbook_role_canonical,predicted_role,confidence,verdict
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Microcrystalline cellulose,OP1R32D61U,exact,Filler,filler,suspending_thickening_agent,0.9999974966049194,MISMATCH
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Polysorbate 80,6OZP39ZG8H,exact,Surfactant,surfactant,,0.0,UNTESTABLE (no HPE capability data)
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Sodium lauryl sulfate,368GB5141J,exact,Surfactant,surfactant,surfactant,0.9991483688354492,CORRECT
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Crospovidone,2S7830E561,exact,Disintegrant,disintegrant,disintegrant,0.9910150170326233,CORRECT
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Hypromellose,3NXW29V3WO,exact,Binder,binder,stabilizing_agent,0.9999169111251831,MISMATCH
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Hydroxypropyl cellulose,2165RE0K14,exact,Coating agent,coating_agent,stabilizing_agent,0.7514336705207825,MISMATCH
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Sodium carbonate,45P3261C7T,exact,Alkalizing agent,alkalizing_agent,alkalizing_agent,0.9996598958969116,CORRECT
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Purified water,059QF0KO0R,substring,Solvent,solvent,solvent,0.9922873973846436,CORRECT
+F3,Pantoprazole DR Multiparticulate (Powder for Oral Suspension),DELAYED RELEASE ORAL SUSPENSION,6871619Q5X,Talc,7SEV7J4R1U,exact,Lubricant,lubricant,filler,0.9551206827163696,MISMATCH
+F4,Cefixime Oral Suspension,ORAL SUSPENSION,XZ7BG04GJX,Xanthan gum,TTV12P4NEE,exact,Thickening agent,suspending_thickening_agent,stabilizing_agent,0.9999864101409912,MISMATCH
+F4,Cefixime Oral Suspension,ORAL SUSPENSION,XZ7BG04GJX,Sodium benzoate,OJ245FE5EU,exact,Preservative,preservative,preservative,0.9999996423721313,CORRECT
+F4,Cefixime Oral Suspension,ORAL SUSPENSION,XZ7BG04GJX,Colloidal silicon dioxide,ETJ7Z6XBU4,substring,Dispersing agent,dispersing_agent,suspending_thickening_agent,0.999993085861206,MISMATCH
+F4,Cefixime Oral Suspension,ORAL SUSPENSION,XZ7BG04GJX,Strawberry flavor,4J2TY8Y81V,substring,Flavor,flavoring_agent,,0.0,UNTESTABLE (no HPE capability data)
+F4,Cefixime Oral Suspension,ORAL SUSPENSION,XZ7BG04GJX,Sucrose,C151H8M554,exact,"Filler, Sweetener",filler|sweetening_agent,suspending_thickening_agent,0.9959385395050049,MISMATCH
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH,Propylene glycol,602HN5L69H,exact,Cosolvent,solvent,plasticizer,0.5445464849472046,MISMATCH
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH,Ethanol (95%),3K9958V90M,substring,Cosolvent,solvent,,0.0,UNTESTABLE (no HPE capability data)
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH,Polyethylene glycol 400,B697894SGQ,exact,"Cosolvent, Thickening agent",solvent|suspending_thickening_agent,lubricant,1.8695904145715758e-05,MISMATCH
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH,Monobasic sodium phosphate,70WT22SF4B,substring,Not explicitly stated,,,0.0,UNTESTABLE (no HPE capability data)
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH,Sodium saccharin,FST467XS7D,substring,Sweetener,sweetening_agent,sweetening_agent,0.9999985694885254,CORRECT
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH,Flavorants,,not_found,Flavor,flavoring_agent,,,UNTESTABLE (no UNII match)
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH,FD&C Red,WZB9127XOA,substring,Dye,,,0.0,UNTESTABLE (no HPE capability data)
+F5,Dextromethorphan Solution,SOLUTION,9D2RTI9KYH,Purified water,059QF0KO0R,substring,Vehicle,solvent,solvent,0.9999992847442627,CORRECT
+F6,Omeprazole Delayed-Release Capsule,"CAPSULE, DELAYED RELEASE",KG60484QX9,Povidone (Plasdone K90),FZ989GH94E,substring,Binder,binder,binder,0.9514978528022766,CORRECT
+F6,Omeprazole Delayed-Release Capsule,"CAPSULE, DELAYED RELEASE",KG60484QX9,Sodium lauryl sulfate,368GB5141J,exact,Surfactant,surfactant,surfactant,0.9937864542007446,CORRECT
+F6,Omeprazole Delayed-Release Capsule,"CAPSULE, DELAYED RELEASE",KG60484QX9,Lactose anhydrous,J2B2A4N98G,substring,Filler,filler,filler,1.0,CORRECT
+F6,Omeprazole Delayed-Release Capsule,"CAPSULE, DELAYED RELEASE",KG60484QX9,Disodium phosphate,70WT22SF4B,substring,Alkalizing agent,alkalizing_agent,,0.0,UNTESTABLE (no HPE capability data)
+F6,Omeprazole Delayed-Release Capsule,"CAPSULE, DELAYED RELEASE",KG60484QX9,Purified water,059QF0KO0R,substring,Solvent,solvent,solvent,0.27337032556533813,CORRECT
+F7,Ambroxol HCl Cough Syrup (Formulation A),SYRUP,CC995ZMV90,Benzoic acid,8SKN0B0MIM,exact,Preservative,preservative,preservative,0.9999991655349731,CORRECT
+F7,Ambroxol HCl Cough Syrup (Formulation A),SYRUP,CC995ZMV90,Hydroxyethylcellulose,OP1R32D61U,substring,Thickening agent,suspending_thickening_agent,suspending_thickening_agent,1.0,CORRECT
+F7,Ambroxol HCl Cough Syrup (Formulation A),SYRUP,CC995ZMV90,Sucralose,96K6UQ3ZD4,exact,Sweetener,sweetening_agent,sweetening_agent,0.9999995231628418,CORRECT
+F7,Ambroxol HCl Cough Syrup (Formulation A),SYRUP,CC995ZMV90,Flavourings,,not_found,Flavor,flavoring_agent,,,UNTESTABLE (no UNII match)
+F7,Ambroxol HCl Cough Syrup (Formulation A),SYRUP,CC995ZMV90,Water,059QF0KO0R,exact,Solvent,solvent,solvent,0.9999788999557495,CORRECT
+F8,Ambroxol HCl Cough Syrup (Formulation B),SYRUP,CC995ZMV90,Benzoic acid,8SKN0B0MIM,exact,Preservative,preservative,preservative,0.9999998807907104,CORRECT
+F8,Ambroxol HCl Cough Syrup (Formulation B),SYRUP,CC995ZMV90,Acesulfame potassium,23OV73Q5G9,exact,Sweetener,sweetening_agent,sweetening_agent,0.9999982118606567,CORRECT
+F8,Ambroxol HCl Cough Syrup (Formulation B),SYRUP,CC995ZMV90,Sorbitol (70% solution),506T60A25R,substring,Not explicitly stated,,sweetening_agent,0.9999806880950928,UNTESTABLE (textbook role(s) ['not explicitly stated'] not in your taxonomy)
+F8,Ambroxol HCl Cough Syrup (Formulation B),SYRUP,CC995ZMV90,Glycerol (85% solution),PDC6A3C0OX,substring,Not explicitly stated,,,0.0,UNTESTABLE (no HPE capability data)
+F8,Ambroxol HCl Cough Syrup (Formulation B),SYRUP,CC995ZMV90,Flavourings,,not_found,Flavor,flavoring_agent,,,UNTESTABLE (no UNII match)
+F8,Ambroxol HCl Cough Syrup (Formulation B),SYRUP,CC995ZMV90,Water,059QF0KO0R,exact,Solvent,solvent,solvent,0.9999992847442627,CORRECT

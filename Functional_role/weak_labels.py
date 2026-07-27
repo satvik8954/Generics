@@ -27,7 +27,7 @@ import pandas as pd
 from scipy.optimize import linear_sum_assignment
 
 from config import (ORAL_CSV, PICKLE_PATH, HIGH_CONF_CSV_PATH, PASS2_CSV_PATH,
-                     ROLE_NAMES, EXCLUSIVE_ROLES, MIN_UNII_COUNT,
+                     ROLE_NAMES, EXCLUSIVE_ROLES, ROLE_CAPACITY, MIN_UNII_COUNT,
                      GENERIC_ROLES, GENERIC_ROLE_PENALTY)
 from roles import build_unii_to_roles, allowed_roles_for_form, form_bucket
 
@@ -86,26 +86,70 @@ def pass1_unambiguous(formulations, unii_to_roles):
     return results
 
 
-def estimate_priors(results):
+def jaccard_similarity(caps_a: set, caps_b: set) -> float:
+    union = caps_a | caps_b
+    return len(caps_a & caps_b) / len(union) if union else 0.0
+
+
+def build_similarity_donors(unii_to_roles: dict, min_jaccard: float = 0.5) -> dict:
+    """
+    Returns {unii: [(donor_unii, jaccard), ...]} sorted by descending jaccard,
+    for every excipient that has at least one other excipient sharing
+    >= min_jaccard of its raw HPE capability set. Used to "borrow" a prior
+    from a chemically/functionally similar excipient when an excipient has
+    zero real Pass-1 evidence of its own anywhere (e.g. sorbitol, sucrose —
+    see estimate_priors below) rather than falling straight to the pure
+    global role-popularity fallback, which has nothing to do with that
+    specific excipient at all.
+    """
+    uniis = list(unii_to_roles.keys())
+    donors = defaultdict(list)
+    for i, u in enumerate(uniis):
+        caps_u = unii_to_roles[u]
+        for v in uniis:
+            if v == u:
+                continue
+            j = jaccard_similarity(caps_u, unii_to_roles[v])
+            if j >= min_jaccard:
+                donors[u].append((v, j))
+        donors[u].sort(key=lambda x: -x[1])
+    return donors
+
+
+def estimate_priors(results, unii_to_roles=None, similarity_donors=None):
     """
     Returns (prior_fn, sample_count_fn).
 
     prior_fn(unii, role, bucket) -> smoothed P(role | unii, bucket), with a
-        3-level fallback chain:
+        4-level fallback chain:
           1. (unii, bucket)-specific prior, if that combo has
              >= MIN_UNII_COUNT Pass-1 occurrences (real, dosage-form-aware
              evidence for THIS excipient in THIS kind of formulation)
           2. unii-level prior across ALL buckets combined, if that has
              >= MIN_UNII_COUNT occurrences (some evidence for this
              excipient, just not bucket-specific)
-          3. global role prior (no real evidence for this excipient at all)
+          2.5. BORROWED: if the excipient has ZERO real evidence anywhere
+             (own-global also below MIN_UNII_COUNT — e.g. sorbitol, sucrose,
+             which never once collapse to a single candidate via Pass 1),
+             look for the most similar excipient by raw HPE capability-set
+             Jaccard overlap (>= 0.5) that DOES have real bucket-specific
+             evidence, and borrow a similarity-weighted average of their
+             bucket-specific priors instead. E.g. sorbitol (jaccard=0.60
+             with mannitol) borrows mannitol's real liquid-bucket evidence
+             (mannitol: 19 real samples, correctly favors sweetening_agent)
+             rather than falling to a role that's merely globally common
+             across ALL 378 excipients and has nothing to do with sorbitol.
+          3. global role prior (no real evidence for this excipient, and no
+             similar excipient with real evidence either)
 
     This exists because a single unii-level prior silently mixes e.g.
     "mannitol as filler in tablets" (hundreds of occurrences) with
     "mannitol as sweetener in liquids/ODTs" (a couple dozen) into one
     number that's dominated by whichever dosage form is more common
     overall — wrongly overriding the sweetener signal even when scoring
-    a liquid/ODT formulation specifically.
+    a liquid/ODT formulation specifically. Level 2.5 addresses a DIFFERENT
+    problem: excipients with no evidence of their own at all, for which
+    bucket-conditioning has nothing to condition on in the first place.
 
     sample_count_fn(unii, bucket=None) -> how many Pass-1 occurrences back
         this excipient's prior at the given bucket (or across all buckets
@@ -125,6 +169,17 @@ def estimate_priors(results):
     global_prior = {role: count / total for role, count in global_role_counts.items()}
     num_roles = len(ROLE_NAMES)
 
+    def _bucket_prior_if_real(donor_unii, role, bucket):
+        """Level-1-style lookup for a DONOR excipient only, no further
+        fallback — returns None if the donor doesn't have real bucket
+        evidence either, so the caller can skip to the next donor."""
+        bucket_counts = unii_bucket_role_counts.get(donor_unii, {}).get(bucket)
+        total_db = sum(bucket_counts.values()) if bucket_counts else 0
+        if total_db >= MIN_UNII_COUNT:
+            role_count = bucket_counts.get(role, 0)
+            return (role_count + 1) / (total_db + num_roles)
+        return None
+
     def prior(unii, role, bucket):
         # Level 1: bucket-specific
         bucket_counts = unii_bucket_role_counts.get(unii, {}).get(bucket)
@@ -139,6 +194,17 @@ def estimate_priors(results):
         if total_u >= MIN_UNII_COUNT:
             role_count = counts.get(role, 0)
             return (role_count + 1) / (total_u + num_roles)
+
+        # Level 2.5: borrow from similar excipients with real bucket evidence
+        if similarity_donors is not None and total_u == 0:
+            weighted_sum, weight_total = 0.0, 0.0
+            for donor_unii, jaccard in similarity_donors.get(unii, []):
+                p = _bucket_prior_if_real(donor_unii, role, bucket)
+                if p is not None:
+                    weighted_sum += jaccard * p
+                    weight_total += jaccard
+            if weight_total > 0:
+                return weighted_sum / weight_total
 
         # Level 3: global fallback
         return global_prior.get(role, 1e-6)
@@ -160,17 +226,25 @@ def pass2_optimal(results, prior_fn, sample_count_fn):
     of greedily walking a single sorted list — this avoids the "loser gets
     shoved into whatever's left" failure mode.
 
+    Each exclusive role has a CAPACITY (config.ROLE_CAPACITY, default 1,
+    lubricant/glidant relaxed to 2) — the number of excipients that can
+    simultaneously hold it in one formulation. This is implemented by
+    offering `capacity` duplicate columns per role in the Hungarian cost
+    matrix (all scored identically for a given excipient), so up to
+    `capacity` different excipients can each win one copy of that role.
+    Capacity 1 roles behave exactly as before. This matters because an
+    excipient with a near-deterministic, overwhelming claim on a role (e.g.
+    magnesium stearate: 99.68% confidence, 7159 real lubricant samples)
+    would otherwise permanently block every other excipient from ever
+    winning that role in training data, even when real formulations
+    legitimately use two (e.g. Mg Stearate + Talc as a dual lubricant
+    system) and textbook ground truth says both are correct.
+
     Before entering Hungarian, each excipient's best EXCLUSIVE-role prior is
     compared against its own best NON-exclusive-role prior. If the
     non-exclusive alternative scores higher, the excipient opts out of the
     exclusive-role competition entirely instead of being forced to bid on a
-    role it's actually unlikely to hold. Without this, an excipient with
-    only one (low-probability) exclusive candidate — e.g. mannitol, which is
-    usually a sweetener (52%) but only rarely a filler (2%) in liquid/ODT
-    formulations — gets dragged into Hungarian anyway just because it HAS an
-    eligible exclusive slot, often "winning" it by default (no one else
-    wants it), producing a confidently wrong label. Opting out lets it be
-    scored honestly in Step 2 instead, where its real best role can win.
+    role it's actually unlikely to hold.
 
     Step 2: whatever's left (excipients with no exclusive role, who opted
     out, or who lost the Hungarian competition) gets the best remaining
@@ -185,10 +259,14 @@ def pass2_optimal(results, prior_fn, sample_count_fn):
         bucket = r["bucket"]
         remaining = r["remaining"]
         excipients = list(remaining.keys())
-        filled_exclusive_roles = {a["role"] for a in r["assignments"] if a["role"] in EXCLUSIVE_ROLES}
+
+        # role -> how many times it's already been used (starts from pass1)
+        filled_counts = Counter(a["role"] for a in r["assignments"] if a["role"] in EXCLUSIVE_ROLES)
+        fully_filled = {role for role, c in filled_counts.items()
+                        if c >= ROLE_CAPACITY.get(role, 1)}
 
         # ---- Step 1: Hungarian assignment for exclusive-role slots ----
-        exclusive_cands = {u: (remaining[u] & EXCLUSIVE_ROLES) - filled_exclusive_roles
+        exclusive_cands = {u: (remaining[u] & EXCLUSIVE_ROLES) - fully_filled
                             for u in excipients}
 
         # opt-out check: only let an excipient into Hungarian if its best
@@ -207,7 +285,12 @@ def pass2_optimal(results, prior_fn, sample_count_fn):
                 continue  # opted out -> handled entirely in Step 2
             E.append(u)
 
-        R = sorted({role for u in E for role in exclusive_cands[u]})
+        # build R with `capacity - already_filled` duplicate columns per role
+        candidate_roles = sorted({role for u in E for role in exclusive_cands[u]})
+        R = []
+        for role in candidate_roles:
+            remaining_capacity = ROLE_CAPACITY.get(role, 1) - filled_counts.get(role, 0)
+            R.extend([role] * max(remaining_capacity, 0))
 
         matched = {}  # unii -> (role, raw_score)
         if E and R:
@@ -235,7 +318,9 @@ def pass2_optimal(results, prior_fn, sample_count_fn):
                 "n_candidates": n_candidates, "n_samples": n_samples,
                 "source": "pass2",
             })
-            filled_exclusive_roles.add(role)
+            filled_counts[role] += 1
+            if filled_counts[role] >= ROLE_CAPACITY.get(role, 1):
+                fully_filled.add(role)
             n_pass2 += 1
 
         # ---- Step 2: leftover excipients (no exclusive candidate, opted
@@ -245,7 +330,7 @@ def pass2_optimal(results, prior_fn, sample_count_fn):
         for u in excipients:
             if u in matched:
                 continue
-            cands = remaining[u] - filled_exclusive_roles
+            cands = remaining[u] - fully_filled
             if not cands:
                 new_remaining[u] = remaining[u]
                 continue
@@ -288,7 +373,9 @@ def build_weak_labels():
     results = pass1_unambiguous(formulations, unii_to_roles)
 
     print("[4] Estimating empirical priors from Pass 1...")
-    prior_fn, sample_count_fn = estimate_priors(results)
+    print("    Building capability-similarity donor map (for zero-evidence excipients)...")
+    similarity_donors = build_similarity_donors(unii_to_roles)
+    prior_fn, sample_count_fn = estimate_priors(results, unii_to_roles, similarity_donors)
 
     print("[5] Pass 2 (optimal exclusive-slot assignment)...")
     pass2_optimal(results, prior_fn, sample_count_fn)
