@@ -1,0 +1,16 @@
+formulation_id,formulation_name,dosage_form,excipient_name,textbook_role,api_unii
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,Crospovidone,Disintegrant,3O2T2PJ89D
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,Magnesium stearate,Lubricant,3O2T2PJ89D
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,Mannitol,Sweetener,3O2T2PJ89D
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,"Silicon dioxide, colloidal",Glidant,3O2T2PJ89D
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,Sucralose,Sweetener,3O2T2PJ89D
+F2,Depakene oral solution,SOLUTION,Glycerin,"Sweetener, cosolvent",5VOM6GYJ0D
+F2,Depakene oral solution,SOLUTION,Methylparaben,Antimicrobial preservative,5VOM6GYJ0D
+F2,Depakene oral solution,SOLUTION,Propylparaben,Antimicrobial preservative,5VOM6GYJ0D
+F2,Depakene oral solution,SOLUTION,Sorbitol,"Sweetener, cosolvent",5VOM6GYJ0D
+F2,Depakene oral solution,SOLUTION,Purified water,Solvent,5VOM6GYJ0D
+F2,Depakene oral solution,SOLUTION,Sucrose,Sweetener,5VOM6GYJ0D
+F2,Depakene oral solution,SOLUTION,FD&C Red No. 40,Dye,5VOM6GYJ0D
+F2,Depakene oral solution,SOLUTION,Cherry flavor,Flavor,5VOM6GYJ0D
+
+TEST001,Metformin IR Tablet,TABLET,Microcrystalline Cellulose,Filler,18YJ200F1S

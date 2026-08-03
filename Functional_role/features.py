@@ -8,7 +8,7 @@ Feature layout (74-dim with the current 24-role taxonomy + 20 API descriptors):
     [24:30] dosage-form bucket features (is_tablet, is_capsule, is_liquid,
             is_extended_release, is_coated, is_chewable_odt)
     [30:54] co-occurrence context: count of OTHER excipients in the same
-            formulation whose raw capability includes each role
+            formulation whose raw capability includes each role  
     [54:74] API physicochemical descriptors (RDKit, z-score normalized) —
             MolWt, LogP, TPSA, etc. Same API -> same 20 values regardless
             of dosage form/excipients, but lets the model learn e.g.

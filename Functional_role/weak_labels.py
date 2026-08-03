@@ -28,6 +28,7 @@ from scipy.optimize import linear_sum_assignment
 
 from config import (ORAL_CSV, PICKLE_PATH, HIGH_CONF_CSV_PATH, PASS2_CSV_PATH,
                      ROLE_NAMES, EXCLUSIVE_ROLES, ROLE_CAPACITY, MIN_UNII_COUNT,
+                     MIN_SAMPLES_PER_BUCKET_FOR_DIVERSITY,
                      GENERIC_ROLES, GENERIC_ROLE_PENALTY)
 from roles import build_unii_to_roles, allowed_roles_for_form, form_bucket
 
@@ -86,37 +87,7 @@ def pass1_unambiguous(formulations, unii_to_roles):
     return results
 
 
-def jaccard_similarity(caps_a: set, caps_b: set) -> float:
-    union = caps_a | caps_b
-    return len(caps_a & caps_b) / len(union) if union else 0.0
-
-
-def build_similarity_donors(unii_to_roles: dict, min_jaccard: float = 0.5) -> dict:
-    """
-    Returns {unii: [(donor_unii, jaccard), ...]} sorted by descending jaccard,
-    for every excipient that has at least one other excipient sharing
-    >= min_jaccard of its raw HPE capability set. Used to "borrow" a prior
-    from a chemically/functionally similar excipient when an excipient has
-    zero real Pass-1 evidence of its own anywhere (e.g. sorbitol, sucrose —
-    see estimate_priors below) rather than falling straight to the pure
-    global role-popularity fallback, which has nothing to do with that
-    specific excipient at all.
-    """
-    uniis = list(unii_to_roles.keys())
-    donors = defaultdict(list)
-    for i, u in enumerate(uniis):
-        caps_u = unii_to_roles[u]
-        for v in uniis:
-            if v == u:
-                continue
-            j = jaccard_similarity(caps_u, unii_to_roles[v])
-            if j >= min_jaccard:
-                donors[u].append((v, j))
-        donors[u].sort(key=lambda x: -x[1])
-    return donors
-
-
-def estimate_priors(results, unii_to_roles=None, similarity_donors=None):
+def estimate_priors(results):
     """
     Returns (prior_fn, sample_count_fn).
 
@@ -126,30 +97,48 @@ def estimate_priors(results, unii_to_roles=None, similarity_donors=None):
              >= MIN_UNII_COUNT Pass-1 occurrences (real, dosage-form-aware
              evidence for THIS excipient in THIS kind of formulation)
           2. unii-level prior across ALL buckets combined, if that has
-             >= MIN_UNII_COUNT occurrences (some evidence for this
-             excipient, just not bucket-specific)
-          2.5. BORROWED: if the excipient has ZERO real evidence anywhere
-             (own-global also below MIN_UNII_COUNT — e.g. sorbitol, sucrose,
-             which never once collapse to a single candidate via Pass 1),
-             look for the most similar excipient by raw HPE capability-set
-             Jaccard overlap (>= 0.5) that DOES have real bucket-specific
-             evidence, and borrow a similarity-weighted average of their
-             bucket-specific priors instead. E.g. sorbitol (jaccard=0.60
-             with mannitol) borrows mannitol's real liquid-bucket evidence
-             (mannitol: 19 real samples, correctly favors sweetening_agent)
-             rather than falling to a role that's merely globally common
-             across ALL 378 excipients and has nothing to do with sorbitol.
-          3. global role prior (no real evidence for this excipient, and no
-             similar excipient with real evidence either)
+             >= MIN_UNII_COUNT occurrences AND those occurrences are
+             spread across >= 2 DIFFERENT buckets with real (non-fluke)
+             representation in each. Without the diversity check, an
+             excipient whose evidence comes entirely from ONE bucket would
+             get treated as if it had genuine cross-context preference,
+             when really it's an artifact of that bucket's dosage-form
+             filtering. Concrete case that motivated this: ethanol's raw
+             HPE capability is {solvent, preservative}. In every SOLID-form
+             row, allowed_roles_for_form() strips "solvent" (not a solid-
+             form-relevant role), leaving "preservative" as the only
+             candidate -> Pass 1 calls it unambiguous, confidence 1.0, 360
+             times, entirely from the solid bucket. That 360-sample count
+             cleared the old MIN_UNII_COUNT check easily and got treated
+             as "ethanol prefers preservative" -- then got applied to
+             ethanol's LIQUID-form rows too (where solvent vs preservative
+             is genuinely ambiguous and solvent is usually correct),
+             wrongly predicting preservative there at ~94% confidence.
+             The fix: only trust this level if the unii's evidence spans
+             2+ distinct buckets, each with >= MIN_SAMPLES_PER_BUCKET_FOR_DIVERSITY
+             samples -- i.e. actual cross-context agreement, not one
+             bucket's filtering artifact posing as a general preference.
+          3. bucket-level prior across ALL excipients in that bucket, if
+             that bucket has >= MIN_UNII_COUNT total Pass-1 occurrences.
+             This is new: it answers "what roles are common in THIS kind
+             of dosage form in general" -- e.g. for ethanol's liquid rows,
+             "what do liquid formulations' excipients usually get labeled"
+             (solvent and preservative are both common there) rather than
+             either a contaminated excipient-specific number (old level 2)
+             or a fully flattened all-forms-mixed number (old level 3, now
+             level 4). This is the dosage-form-aware middle ground that
+             was missing before -- previously the fallback chain jumped
+             straight from "this excipient, this bucket" to "everything,
+             everywhere," skipping over "this bucket, in general" entirely.
+          4. global role prior across ALL excipients AND ALL buckets (no
+             real evidence for this excipient OR this bucket at all)
 
     This exists because a single unii-level prior silently mixes e.g.
     "mannitol as filler in tablets" (hundreds of occurrences) with
     "mannitol as sweetener in liquids/ODTs" (a couple dozen) into one
     number that's dominated by whichever dosage form is more common
     overall — wrongly overriding the sweetener signal even when scoring
-    a liquid/ODT formulation specifically. Level 2.5 addresses a DIFFERENT
-    problem: excipients with no evidence of their own at all, for which
-    bucket-conditioning has nothing to condition on in the first place.
+    a liquid/ODT formulation specifically.
 
     sample_count_fn(unii, bucket=None) -> how many Pass-1 occurrences back
         this excipient's prior at the given bucket (or across all buckets
@@ -158,27 +147,18 @@ def estimate_priors(results, unii_to_roles=None, similarity_donors=None):
     """
     unii_bucket_role_counts = defaultdict(lambda: defaultdict(Counter))
     unii_role_counts = defaultdict(Counter)
+    bucket_role_counts = defaultdict(Counter)
     global_role_counts = Counter()
     for r in results:
         bucket = r["bucket"]
         for a in r["assignments"]:
             unii_bucket_role_counts[a["unii"]][bucket][a["role"]] += 1
             unii_role_counts[a["unii"]][a["role"]] += 1
+            bucket_role_counts[bucket][a["role"]] += 1
             global_role_counts[a["role"]] += 1
     total = sum(global_role_counts.values()) or 1
     global_prior = {role: count / total for role, count in global_role_counts.items()}
     num_roles = len(ROLE_NAMES)
-
-    def _bucket_prior_if_real(donor_unii, role, bucket):
-        """Level-1-style lookup for a DONOR excipient only, no further
-        fallback — returns None if the donor doesn't have real bucket
-        evidence either, so the caller can skip to the next donor."""
-        bucket_counts = unii_bucket_role_counts.get(donor_unii, {}).get(bucket)
-        total_db = sum(bucket_counts.values()) if bucket_counts else 0
-        if total_db >= MIN_UNII_COUNT:
-            role_count = bucket_counts.get(role, 0)
-            return (role_count + 1) / (total_db + num_roles)
-        return None
 
     def prior(unii, role, bucket):
         # Level 1: bucket-specific
@@ -188,25 +168,27 @@ def estimate_priors(results, unii_to_roles=None, similarity_donors=None):
             role_count = bucket_counts.get(role, 0)
             return (role_count + 1) / (total_ub + num_roles)
 
-        # Level 2: unii-level, all buckets combined
+        # Level 2: unii-level, all buckets combined -- gated on real
+        # cross-bucket diversity, not just raw sample count (see docstring)
+        per_bucket_totals = {b: sum(c.values()) for b, c in unii_bucket_role_counts.get(unii, {}).items()}
+        n_diverse_buckets = sum(1 for c in per_bucket_totals.values()
+                                 if c >= MIN_SAMPLES_PER_BUCKET_FOR_DIVERSITY)
         counts = unii_role_counts.get(unii)
         total_u = sum(counts.values()) if counts else 0
-        if total_u >= MIN_UNII_COUNT:
+        if total_u >= MIN_UNII_COUNT and n_diverse_buckets >= 2:
             role_count = counts.get(role, 0)
             return (role_count + 1) / (total_u + num_roles)
 
-        # Level 2.5: borrow from similar excipients with real bucket evidence
-        if similarity_donors is not None and total_u == 0:
-            weighted_sum, weight_total = 0.0, 0.0
-            for donor_unii, jaccard in similarity_donors.get(unii, []):
-                p = _bucket_prior_if_real(donor_unii, role, bucket)
-                if p is not None:
-                    weighted_sum += jaccard * p
-                    weight_total += jaccard
-            if weight_total > 0:
-                return weighted_sum / weight_total
+        # Level 3: bucket-level, all excipients in this bucket combined --
+        # dosage-form-aware fallback, used before collapsing all the way
+        # down to the fully flat global prior
+        bcounts = bucket_role_counts.get(bucket)
+        total_b = sum(bcounts.values()) if bcounts else 0
+        if total_b >= MIN_UNII_COUNT:
+            role_count = bcounts.get(role, 0)
+            return (role_count + 1) / (total_b + num_roles)
 
-        # Level 3: global fallback
+        # Level 4: fully global fallback
         return global_prior.get(role, 1e-6)
 
     def sample_count(unii, bucket=None):
@@ -373,9 +355,7 @@ def build_weak_labels():
     results = pass1_unambiguous(formulations, unii_to_roles)
 
     print("[4] Estimating empirical priors from Pass 1...")
-    print("    Building capability-similarity donor map (for zero-evidence excipients)...")
-    similarity_donors = build_similarity_donors(unii_to_roles)
-    prior_fn, sample_count_fn = estimate_priors(results, unii_to_roles, similarity_donors)
+    prior_fn, sample_count_fn = estimate_priors(results)
 
     print("[5] Pass 2 (optimal exclusive-slot assignment)...")
     pass2_optimal(results, prior_fn, sample_count_fn)

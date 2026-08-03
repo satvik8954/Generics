@@ -14,9 +14,11 @@ Usage as a script (edit the example at the bottom), or import
 
 import pickle
 
+from collections import Counter
+
 import numpy as np
 
-from config import MODEL_PATH, ROLE_NAMES, NUM_ROLES, EXCLUSIVE_ROLES
+from config import MODEL_PATH, ROLE_NAMES, NUM_ROLES, EXCLUSIVE_ROLES, ROLE_CAPACITY
 from roles import build_unii_to_roles
 from features import build_feature_vector, load_api_features, apply_coocc_scaler
 
@@ -67,16 +69,27 @@ def predict_formulation(dosage_form: str, excipient_uniis: list, api_unii: str =
     scored.sort(key=lambda x: -x[0])
 
     assigned = {}
-    filled_exclusive = set()
+    # NOTE: this used to be `filled_exclusive = set()`, which hard-coded
+    # capacity 1 for every exclusive role regardless of config.ROLE_CAPACITY
+    # -- so raising ROLE_CAPACITY["solvent"] to 2 (to allow real multi-
+    # cosolvent systems like water + ethanol + glycerin + propylene glycol)
+    # had NO effect here, because this function never even imported
+    # ROLE_CAPACITY. Training-label generation (weak_labels.py Pass 2)
+    # respected the raised capacity; inference (this function) silently
+    # didn't, so the fix looked like it wasn't working even though it was
+    # -- it just never reached this code path. Now a Counter tracks how
+    # many winners each exclusive role has taken so far, and a role only
+    # gets blocked once it hits its own configured capacity.
+    filled_exclusive_counts = Counter()
     for score, unii, role_idx in scored:
         if unii in assigned:
             continue
         role = ROLE_NAMES[role_idx]
-        if role in EXCLUSIVE_ROLES and role in filled_exclusive:
+        if role in EXCLUSIVE_ROLES and filled_exclusive_counts[role] >= ROLE_CAPACITY.get(role, 1):
             continue
         assigned[unii] = {"role": role, "confidence": float(score)}
         if role in EXCLUSIVE_ROLES:
-            filled_exclusive.add(role)
+            filled_exclusive_counts[role] += 1
 
     results = []
     for unii in excipient_uniis:

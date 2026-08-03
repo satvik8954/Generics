@@ -1,14 +1,80 @@
 formulation_id,formulation_name,dosage_form,api_unii,excipient_name,unii,unii_match_type,textbook_role_raw,textbook_role_canonical,predicted_role,confidence,verdict
-F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,Crospovidone,2S7830E561,exact,Disintegrant,disintegrant,disintegrant,0.9999631643295288,CORRECT
-F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,Magnesium stearate,70097M6I30,exact,Lubricant,lubricant,lubricant,0.9999984502792358,CORRECT
-F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,Mannitol,3OWL53L36A,exact,Sweetener,sweetening_agent,sweetening_agent,0.9998431205749512,CORRECT
-F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,"Silicon dioxide, colloidal",ETJ7Z6XBU4,substring,Glidant,glidant,glidant,0.9996682405471802,CORRECT
-F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,Sucralose,96K6UQ3ZD4,exact,Sweetener,sweetening_agent,sweetening_agent,0.9999942779541016,CORRECT
-F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Glycerin,PDC6A3C0OX,exact,"Sweetener, cosolvent",sweetening_agent|solvent,,0.0,UNTESTABLE (no HPE capability data)
-F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Methylparaben,A2I8C7HI9T,exact,Antimicrobial preservative,preservative,preservative,0.9999972581863403,CORRECT
-F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Propylparaben,Z8IX2SC1OH,exact,Antimicrobial preservative,preservative,preservative,0.9999972581863403,CORRECT
-F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Sorbitol,506T60A25R,exact,"Sweetener, cosolvent",sweetening_agent|solvent,sweetening_agent,0.9960439205169678,CORRECT
-F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Purified water,059QF0KO0R,substring,Solvent,solvent,solvent,0.9999727010726929,CORRECT
-F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Sucrose,C151H8M554,exact,Sweetener,sweetening_agent,sweetening_agent,0.9837982654571533,CORRECT
-F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,FD&C Red No. 40,WZB9127XOA,exact,Dye,,,0.0,UNTESTABLE (no HPE capability data)
-F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Cherry flavor,BUC5I9595W,substring,Flavor,flavoring_agent,,0.0,UNTESTABLE (no HPE capability data)
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,Crospovidone,68401960MK,frozen,Disintegrant,disintegrant,disintegrant,0.9997746348381042,CORRECT
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,Magnesium stearate,70097M6I30,frozen,Lubricant,lubricant,lubricant,0.9998214840888977,CORRECT
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,Mannitol,3OWL53L36A,frozen,Sweetener,sweetening_agent,sweetening_agent,0.9499918818473816,CORRECT
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,"Silicon dioxide, colloidal",ETJ7Z6XBU4,frozen,Glidant,glidant,glidant,0.9994538426399231,CORRECT
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,3O2T2PJ89D,Sucralose,96K6UQ3ZD4,frozen,Sweetener,sweetening_agent,sweetening_agent,0.9999294281005859,CORRECT
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",4Q81I59GXC,Microcrystalline cellulose,OP1R32D61U,frozen,Diluent,filler,glidant,0.9846518039703369,MISMATCH
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",4Q81I59GXC,Polyvinylpyrrolidone,FZ989GH94E,frozen,Binder,binder,binder,0.8607437610626221,CORRECT
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",4Q81I59GXC,Sodium starch glycolate,H8AV0SQX4D,frozen,Disintegrant,disintegrant,disintegrant,0.9999250173568726,CORRECT
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",4Q81I59GXC,Colloidal silicon dioxide,ETJ7Z6XBU4,frozen,"Lubricant, Glidant",lubricant|glidant,glidant,0.9999812841415405,CORRECT
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",4Q81I59GXC,Talc,7SEV7J4R1U,frozen,"Lubricant, Glidant",lubricant|glidant,lubricant,0.38447731733322144,CORRECT
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",4Q81I59GXC,Magnesium stearate,70097M6I30,frozen,"Lubricant, Glidant",lubricant|glidant,lubricant,0.9999821186065674,CORRECT
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",4Q81I59GXC,Methacrylic acid copolymer,5KY68S2577,frozen,Enteric polymer,coating_agent,filler,0.8469995260238647,MISMATCH
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",4Q81I59GXC,Titanium dioxide,15FIX9V2JP,frozen,Not explicitly stated,,,0.0,UNTESTABLE (no HPE capability data)
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",4Q81I59GXC,Acetyl tributyl citrate,0ZBX0N59RZ,frozen,Not explicitly stated,,plasticizer,0.0,UNTESTABLE (textbook role(s) ['not explicitly stated'] not in your taxonomy)
+F11,Levetiracetam ER Tablet,"TABLET, EXTENDED RELEASE",44YRR34555,Hypromellose,3NXW29V3WO,frozen,Matrix former,controlled_release,solubilizing_agent,0.9252587556838989,MISMATCH
+F11,Levetiracetam ER Tablet,"TABLET, EXTENDED RELEASE",44YRR34555,Colloidal silicon dioxide,ETJ7Z6XBU4,frozen,Glidant,glidant,glidant,0.9999436140060425,CORRECT
+F11,Levetiracetam ER Tablet,"TABLET, EXTENDED RELEASE",44YRR34555,Silicified microcrystalline cellulose,88X4A2YW6T,frozen,Diluent,filler,filler,0.9999626874923706,CORRECT
+F11,Levetiracetam ER Tablet,"TABLET, EXTENDED RELEASE",44YRR34555,Magnesium stearate,70097M6I30,frozen,Lubricant,lubricant,lubricant,0.9999922513961792,CORRECT
+F12,Ambroxol HCl Cough Syrup A,SYRUP,CC995ZMV90,Benzoic acid,8SKN0B0MIM,frozen,Preservative,preservative,preservative,0.9998764991760254,CORRECT
+F12,Ambroxol HCl Cough Syrup A,SYRUP,CC995ZMV90,Hydroxyethylcellulose,T4V6TWG28D,frozen,Thickener,suspending_thickening_agent,suspending_thickening_agent,0.6083893775939941,CORRECT
+F12,Ambroxol HCl Cough Syrup A,SYRUP,CC995ZMV90,Sucralose,96K6UQ3ZD4,frozen,Sweetener,sweetening_agent,sweetening_agent,0.9997004270553589,CORRECT
+F12,Ambroxol HCl Cough Syrup A,SYRUP,CC995ZMV90,Water,059QF0KO0R,frozen,Solvent,solvent,solvent,0.9994256496429443,CORRECT
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Glycerin,PDC6A3C0OX,frozen,"Sweetener, cosolvent",sweetening_agent|solvent,preservative,0.9997836947441101,MISMATCH
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Methylparaben,A2I8C7HI9T,frozen,Antimicrobial preservative,preservative,preservative,0.9999549388885498,CORRECT
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Propylparaben,Z8IX2SC1OH,frozen,Antimicrobial preservative,preservative,preservative,0.9999549388885498,CORRECT
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Sorbitol,506T60A25R,frozen,"Sweetener, cosolvent",sweetening_agent|solvent,sweetening_agent,0.9567968249320984,CORRECT
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Purified water,059QF0KO0R,frozen,Solvent,solvent,solvent,0.9993076324462891,CORRECT
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Sucrose,C151H8M554,frozen,Sweetener,sweetening_agent,sweetening_agent,0.9269807934761047,CORRECT
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,FD&C Red No. 40,WZB9127XOA,frozen,Dye,,,0.0,UNTESTABLE (no HPE capability data)
+F2,Depakene oral solution,SOLUTION,5VOM6GYJ0D,Cherry flavor,BUC5I9595W,frozen,Flavor,flavoring_agent,flavoring_agent,0.9950975775718689,CORRECT
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",KG60484QX9,Hydroxypropyl Methyl Cellulose,3NXW29V3WO,frozen,Surfactant,surfactant,solubilizing_agent,0.9332743883132935,MISMATCH
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",KG60484QX9,Sodium Hydroxide,55X04QC32I,frozen,Alkalizing agent,alkalizing_agent,alkalizing_agent,0.9999533891677856,CORRECT
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",KG60484QX9,Microcrystalline Cellulose,OP1R32D61U,frozen,Not explicitly stated,,glidant,0.9714836478233337,UNTESTABLE (textbook role(s) ['not explicitly stated'] not in your taxonomy)
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",KG60484QX9,Croscarmellose Sodium,M28OL1HH48,frozen,Disintegrating agent,disintegrant,disintegrant,0.9999442100524902,CORRECT
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",KG60484QX9,Magnesium Stearate,70097M6I30,frozen,Lubricant,lubricant,lubricant,0.9999579191207886,CORRECT
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",KG60484QX9,Talc,7SEV7J4R1U,frozen,Lubricant,lubricant,lubricant,0.18835881352424622,CORRECT
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",KG60484QX9,Disodium Hydrogen Phosphate,22ADO53M6F,frozen,Alkalizing agent,alkalizing_agent,solubilizing_agent,0.9992470741271973,MISMATCH
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",KG60484QX9,AcrylEze,NX76LV5T8J,frozen,Enteric coating material,coating_agent,filler,0.9649454951286316,MISMATCH
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",0K5C5T2QPG,Hydroxypropyl Methyl Cellulose,3NXW29V3WO,frozen,Surfactant,surfactant,solubilizing_agent,0.9373982548713684,MISMATCH
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",0K5C5T2QPG,Sodium Hydroxide,55X04QC32I,frozen,Alkalizing agent,alkalizing_agent,alkalizing_agent,0.9999563694000244,CORRECT
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",0K5C5T2QPG,Microcrystalline Cellulose,OP1R32D61U,frozen,Not explicitly stated,,glidant,0.9741318821907043,UNTESTABLE (textbook role(s) ['not explicitly stated'] not in your taxonomy)
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",0K5C5T2QPG,Croscarmellose Sodium,M28OL1HH48,frozen,Disintegrating agent,disintegrant,disintegrant,0.9999442100524902,CORRECT
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",0K5C5T2QPG,Magnesium Stearate,70097M6I30,frozen,Lubricant,lubricant,lubricant,0.999958872795105,CORRECT
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",0K5C5T2QPG,Talc,7SEV7J4R1U,frozen,Lubricant,lubricant,lubricant,0.15543127059936523,CORRECT
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",0K5C5T2QPG,Disodium Hydrogen Phosphate,22ADO53M6F,frozen,Alkalizing agent,alkalizing_agent,solubilizing_agent,0.99928218126297,MISMATCH
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",0K5C5T2QPG,AcrylEze,NX76LV5T8J,frozen,Enteric coating material,coating_agent,filler,0.9686225056648254,MISMATCH
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",6871619Q5X,Microcrystalline cellulose,OP1R32D61U,frozen,Diluent,filler,filler,0.21071316301822662,CORRECT
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",6871619Q5X,Polysorbate 80,6OZP39ZG8H,frozen,Surfactant,surfactant,solubilizing_agent,0.6446232795715332,MISMATCH
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",6871619Q5X,Sodium lauryl sulfate,368GB5141J,frozen,Surfactant,surfactant,lubricant,0.6649841666221619,MISMATCH
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",6871619Q5X,Crospovidone,68401960MK,frozen,Disintegrant,disintegrant,disintegrant,0.9969947338104248,CORRECT
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",6871619Q5X,Hypromellose,3NXW29V3WO,frozen,Binder,binder,solubilizing_agent,0.6271194219589233,MISMATCH
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",6871619Q5X,Hydroxypropyl cellulose,RFW2ET671P,frozen,Water-soluble polymer used for seal coating,coating_agent,surfactant,0.5079624056816101,MISMATCH
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",6871619Q5X,Povidone,FZ989GH94E,frozen,Not explicitly stated,,suspending_thickening_agent,0.7733108997344971,UNTESTABLE (textbook role(s) ['not explicitly stated'] not in your taxonomy)
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",6871619Q5X,Sodium carbonate,45P3261C7T,frozen,Alkaline agent,alkalizing_agent,alkalizing_agent,0.9851735830307007,CORRECT
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",6871619Q5X,Talc,7SEV7J4R1U,frozen,Lubricant,lubricant,lubricant,0.8893247246742249,CORRECT
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",6871619Q5X,Triethyl citrate,8Z96QXD6UM,frozen,Component of enteric coating,,solvent,0.10055069625377655,UNTESTABLE (textbook role(s) ['component of enteric coating'] not in your taxonomy)
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",6871619Q5X,Titanium dioxide,15FIX9V2JP,frozen,Component of seal coating,,,0.0,UNTESTABLE (no HPE capability data)
+F6,Cefixime for Oral Suspension 200mg/5mL,"POWDER, FOR SUSPENSION",XZ7BG04GJX,Xanthan Gum,TTV12P4NEE,frozen,Viscosity enhancer,suspending_thickening_agent,stabilizing_agent,0.9906504154205322,MISMATCH
+F6,Cefixime for Oral Suspension 200mg/5mL,"POWDER, FOR SUSPENSION",XZ7BG04GJX,Sodium Benzoate,OJ245FE5EU,frozen,Preservative,preservative,preservative,0.9887164831161499,CORRECT
+F6,Cefixime for Oral Suspension 200mg/5mL,"POWDER, FOR SUSPENSION",XZ7BG04GJX,Colloidal Silicon Dioxide,ETJ7Z6XBU4,frozen,Dispersing agent,dispersing_agent,suspending_thickening_agent,0.9926161766052246,MISMATCH
+F6,Cefixime for Oral Suspension 200mg/5mL,"POWDER, FOR SUSPENSION",XZ7BG04GJX,Strawberry Flavor,4J2TY8Y81V,frozen,Flavoring agent,flavoring_agent,flavoring_agent,0.9527695178985596,CORRECT
+F6,Cefixime for Oral Suspension 200mg/5mL,"POWDER, FOR SUSPENSION",XZ7BG04GJX,Sucrose,C151H8M554,frozen,"Diluent, Sweetening agent",filler|sweetening_agent,suspending_thickening_agent,0.5883755087852478,MISMATCH
+F7,Liquid Cough Composition Example I,SOLUTION,Z0CG3115FG,Propylene Glycol,6DC9Q167V3,frozen,Cosolvent,solvent,preservative,0.9999935626983643,MISMATCH
+F7,Liquid Cough Composition Example I,SOLUTION,Z0CG3115FG,Ethanol,3K9958V90M,frozen,Cosolvent,solvent,preservative,0.9998724460601807,MISMATCH
+F7,Liquid Cough Composition Example I,SOLUTION,Z0CG3115FG,Menthol,L7T10EIP3A,frozen,Aromatic ingredient,flavoring_agent,flavoring_agent,0.9960063099861145,CORRECT
+F7,Liquid Cough Composition Example I,SOLUTION,Z0CG3115FG,Eucalyptus Oil,2R04ONI662,frozen,Aromatic ingredient,flavoring_agent,,0.0,UNTESTABLE (no HPE capability data)
+F7,Liquid Cough Composition Example I,SOLUTION,Z0CG3115FG,Sucrose,C151H8M554,frozen,Sweetening agent,sweetening_agent,sweetening_agent,0.5698376297950745,CORRECT
+F7,Liquid Cough Composition Example I,SOLUTION,Z0CG3115FG,Carboxymethylcellulose,05JZI7B19X,frozen,Thickening agent,suspending_thickening_agent,suspending_thickening_agent,0.9160299301147461,CORRECT
+F7,Liquid Cough Composition Example I,SOLUTION,Z0CG3115FG,Polysorbate 80,6OZP39ZG8H,frozen,Miscellaneous ingredient,,solubilizing_agent,0.9738605618476868,UNTESTABLE (textbook role(s) ['miscellaneous ingredient'] not in your taxonomy)
+F7,Liquid Cough Composition Example I,SOLUTION,Z0CG3115FG,Glycerin,PDC6A3C0OX,frozen,"Cosolvent, Thickening agent",solvent|suspending_thickening_agent,preservative,0.9999551773071289,MISMATCH
+F7,Liquid Cough Composition Example I,SOLUTION,Z0CG3115FG,Sorbitol,506T60A25R,frozen,"Cosolvent, Sweetening agent",solvent|sweetening_agent,sweetening_agent,0.8945823907852173,CORRECT
+F7,Liquid Cough Composition Example I,SOLUTION,Z0CG3115FG,Glycine,TE7660XO1C,frozen,Buffer system component,buffering_agent,buffering_agent,0.15197189152240753,CORRECT
+F7,Liquid Cough Composition Example I,SOLUTION,Z0CG3115FG,Sodium Hydroxide,55X04QC32I,frozen,Buffer system component,buffering_agent,alkalizing_agent,0.9996592998504639,MISMATCH
+F7,Liquid Cough Composition Example I,SOLUTION,Z0CG3115FG,Purified Water,059QF0KO0R,frozen,Vehicle,solvent,solvent,0.9952677488327026,CORRECT
+F9,Fosfomycin Powder for Solution,"POWDER, FOR SOLUTION",7FXW6U30GY,Glycine,TE7660XO1C,frozen,Diluent,filler,filler,0.2734929621219635,CORRECT
+F9,Fosfomycin Powder for Solution,"POWDER, FOR SOLUTION",7FXW6U30GY,Sucralose,96K6UQ3ZD4,frozen,Sweetener,sweetening_agent,sweetening_agent,0.9985968470573425,CORRECT
+F9,Fosfomycin Powder for Solution,"POWDER, FOR SOLUTION",7FXW6U30GY,Lemon flavour,24RS0A988O,frozen,Flavour,flavoring_agent,,0.0,UNTESTABLE (no HPE capability data)
+F9,Fosfomycin Powder for Solution,"POWDER, FOR SOLUTION",7FXW6U30GY,Silicon dioxide,ETJ7Z6XBU4,frozen,Glidant,glidant,suspending_thickening_agent,0.6498500108718872,MISMATCH
+F9,Fosfomycin Powder for Solution,"POWDER, FOR SOLUTION",7FXW6U30GY,Polyvinylpyrrolidone,FZ989GH94E,frozen,Binder,binder,suspending_thickening_agent,0.7573974132537842,MISMATCH

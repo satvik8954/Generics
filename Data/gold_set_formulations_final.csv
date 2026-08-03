@@ -1,0 +1,80 @@
+formulation_id,formulation_name,dosage_form,excipient_name,textbook_role,api_unii,excipient_unii
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,Crospovidone,Disintegrant,3O2T2PJ89D,68401960MK
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,Magnesium stearate,Lubricant,3O2T2PJ89D,70097M6I30
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,Mannitol,Sweetener,3O2T2PJ89D,3OWL53L36A
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,"Silicon dioxide, colloidal",Glidant,3O2T2PJ89D,ETJ7Z6XBU4
+F1,Donepezil ODT (Zydus),ORALLY DISINTEGRATING TABLET,Sucralose,Sweetener,3O2T2PJ89D,96K6UQ3ZD4
+F2,Depakene oral solution,SOLUTION,Glycerin,"Sweetener, cosolvent",5VOM6GYJ0D,PDC6A3C0OX
+F2,Depakene oral solution,SOLUTION,Methylparaben,Antimicrobial preservative,5VOM6GYJ0D,A2I8C7HI9T
+F2,Depakene oral solution,SOLUTION,Propylparaben,Antimicrobial preservative,5VOM6GYJ0D,Z8IX2SC1OH
+F2,Depakene oral solution,SOLUTION,Sorbitol,"Sweetener, cosolvent",5VOM6GYJ0D,506T60A25R
+F2,Depakene oral solution,SOLUTION,Purified water,Solvent,5VOM6GYJ0D,059QF0KO0R
+F2,Depakene oral solution,SOLUTION,Sucrose,Sweetener,5VOM6GYJ0D,C151H8M554
+F2,Depakene oral solution,SOLUTION,FD&C Red No. 40,Dye,5VOM6GYJ0D,WZB9127XOA
+F2,Depakene oral solution,SOLUTION,Cherry flavor,Flavor,5VOM6GYJ0D,BUC5I9595W
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",Hydroxypropyl Methyl Cellulose,Surfactant,KG60484QX9,3NXW29V3WO
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",Sodium Hydroxide,Alkalizing agent,KG60484QX9,55X04QC32I
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",Microcrystalline Cellulose,Not explicitly stated,KG60484QX9,OP1R32D61U
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",Croscarmellose Sodium,Disintegrating agent,KG60484QX9,M28OL1HH48
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",Magnesium Stearate,Lubricant,KG60484QX9,70097M6I30
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",Talc,Lubricant,KG60484QX9,7SEV7J4R1U
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",Disodium Hydrogen Phosphate,Alkalizing agent,KG60484QX9,22ADO53M6F
+F3,Omeprazole DR Tablet 20mg,"TABLET, DELAYED RELEASE, COATED",AcrylEze,Enteric coating material,KG60484QX9,NX76LV5T8J
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",Hydroxypropyl Methyl Cellulose,Surfactant,0K5C5T2QPG,3NXW29V3WO
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",Sodium Hydroxide,Alkalizing agent,0K5C5T2QPG,55X04QC32I
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",Microcrystalline Cellulose,Not explicitly stated,0K5C5T2QPG,OP1R32D61U
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",Croscarmellose Sodium,Disintegrating agent,0K5C5T2QPG,M28OL1HH48
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",Magnesium Stearate,Lubricant,0K5C5T2QPG,70097M6I30
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",Talc,Lubricant,0K5C5T2QPG,7SEV7J4R1U
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",Disodium Hydrogen Phosphate,Alkalizing agent,0K5C5T2QPG,22ADO53M6F
+F4,Lansoprazole DR Tablet 30mg,"TABLET, DELAYED RELEASE, COATED",AcrylEze,Enteric coating material,0K5C5T2QPG,NX76LV5T8J
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",Microcrystalline cellulose,Diluent,6871619Q5X,OP1R32D61U
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",Polysorbate 80,Surfactant,6871619Q5X,6OZP39ZG8H
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",Sodium lauryl sulfate,Surfactant,6871619Q5X,368GB5141J
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",Crospovidone,Disintegrant,6871619Q5X,68401960MK
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",Hypromellose,Binder,6871619Q5X,3NXW29V3WO
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",Hydroxypropyl cellulose,Water-soluble polymer used for seal coating,6871619Q5X,RFW2ET671P
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",Povidone,Not explicitly stated,6871619Q5X,FZ989GH94E
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",Sodium carbonate,Alkaline agent,6871619Q5X,45P3261C7T
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",Talc,Lubricant,6871619Q5X,7SEV7J4R1U
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",Triethyl citrate,Component of enteric coating,6871619Q5X,8Z96QXD6UM
+F5,Pantoprazole DR Powder for Suspension,"POWDER, FOR SUSPENSION",Titanium dioxide,Component of seal coating,6871619Q5X,15FIX9V2JP
+F6,Cefixime for Oral Suspension 200mg/5mL,"POWDER, FOR SUSPENSION",Xanthan Gum,Viscosity enhancer,XZ7BG04GJX,TTV12P4NEE
+F6,Cefixime for Oral Suspension 200mg/5mL,"POWDER, FOR SUSPENSION",Sodium Benzoate,Preservative,XZ7BG04GJX,OJ245FE5EU
+F6,Cefixime for Oral Suspension 200mg/5mL,"POWDER, FOR SUSPENSION",Colloidal Silicon Dioxide,Dispersing agent,XZ7BG04GJX,ETJ7Z6XBU4
+F6,Cefixime for Oral Suspension 200mg/5mL,"POWDER, FOR SUSPENSION",Strawberry Flavor,Flavoring agent,XZ7BG04GJX,4J2TY8Y81V
+F6,Cefixime for Oral Suspension 200mg/5mL,"POWDER, FOR SUSPENSION",Sucrose,"Diluent, Sweetening agent",XZ7BG04GJX,C151H8M554
+F7,Liquid Cough Composition Example I,SOLUTION,Propylene Glycol,Cosolvent,Z0CG3115FG,6DC9Q167V3
+F7,Liquid Cough Composition Example I,SOLUTION,Ethanol,Cosolvent,Z0CG3115FG,3K9958V90M
+F7,Liquid Cough Composition Example I,SOLUTION,Menthol,Aromatic ingredient,Z0CG3115FG,L7T10EIP3A
+F7,Liquid Cough Composition Example I,SOLUTION,Eucalyptus Oil,Aromatic ingredient,Z0CG3115FG,2R04ONI662
+F7,Liquid Cough Composition Example I,SOLUTION,Sucrose,Sweetening agent,Z0CG3115FG,C151H8M554
+F7,Liquid Cough Composition Example I,SOLUTION,Carboxymethylcellulose,Thickening agent,Z0CG3115FG,05JZI7B19X
+F7,Liquid Cough Composition Example I,SOLUTION,Polysorbate 80,Miscellaneous ingredient,Z0CG3115FG,6OZP39ZG8H
+F7,Liquid Cough Composition Example I,SOLUTION,Glycerin,"Cosolvent, Thickening agent",Z0CG3115FG,PDC6A3C0OX
+F7,Liquid Cough Composition Example I,SOLUTION,Sorbitol,"Cosolvent, Sweetening agent",Z0CG3115FG,506T60A25R
+F7,Liquid Cough Composition Example I,SOLUTION,Glycine,Buffer system component,Z0CG3115FG,TE7660XO1C
+F7,Liquid Cough Composition Example I,SOLUTION,Sodium Hydroxide,Buffer system component,Z0CG3115FG,55X04QC32I
+F7,Liquid Cough Composition Example I,SOLUTION,Purified Water,Vehicle,Z0CG3115FG,059QF0KO0R
+F9,Fosfomycin Powder for Solution,"POWDER, FOR SOLUTION",Glycine,Diluent,7FXW6U30GY,TE7660XO1C
+F9,Fosfomycin Powder for Solution,"POWDER, FOR SOLUTION",Sucralose,Sweetener,7FXW6U30GY,96K6UQ3ZD4
+F9,Fosfomycin Powder for Solution,"POWDER, FOR SOLUTION",Lemon flavour,Flavour,7FXW6U30GY,24RS0A988O
+F9,Fosfomycin Powder for Solution,"POWDER, FOR SOLUTION",Silicon dioxide,Glidant,7FXW6U30GY,ETJ7Z6XBU4
+F9,Fosfomycin Powder for Solution,"POWDER, FOR SOLUTION",Polyvinylpyrrolidone,Binder,7FXW6U30GY,FZ989GH94E
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",Microcrystalline cellulose,Diluent,4Q81I59GXC,OP1R32D61U
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",Polyvinylpyrrolidone,Binder,4Q81I59GXC,FZ989GH94E
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",Sodium starch glycolate,Disintegrant,4Q81I59GXC,H8AV0SQX4D
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",Colloidal silicon dioxide,"Lubricant, Glidant",4Q81I59GXC,ETJ7Z6XBU4
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",Talc,"Lubricant, Glidant",4Q81I59GXC,7SEV7J4R1U
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",Magnesium stearate,"Lubricant, Glidant",4Q81I59GXC,70097M6I30
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",Methacrylic acid copolymer,Enteric polymer,4Q81I59GXC,5KY68S2577
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",Titanium dioxide,Not explicitly stated,4Q81I59GXC,15FIX9V2JP
+F10,Mesalamine DR Capsule,"CAPSULE, DELAYED RELEASE, COATED",Acetyl tributyl citrate,Not explicitly stated,4Q81I59GXC,0ZBX0N59RZ
+F11,Levetiracetam ER Tablet,"TABLET, EXTENDED RELEASE",Hypromellose,Matrix former,44YRR34555,3NXW29V3WO
+F11,Levetiracetam ER Tablet,"TABLET, EXTENDED RELEASE",Colloidal silicon dioxide,Glidant,44YRR34555,ETJ7Z6XBU4
+F11,Levetiracetam ER Tablet,"TABLET, EXTENDED RELEASE",Silicified microcrystalline cellulose,Diluent,44YRR34555,88X4A2YW6T
+F11,Levetiracetam ER Tablet,"TABLET, EXTENDED RELEASE",Magnesium stearate,Lubricant,44YRR34555,70097M6I30
+F12,Ambroxol HCl Cough Syrup A,SYRUP,Benzoic acid,Preservative,CC995ZMV90,8SKN0B0MIM
+F12,Ambroxol HCl Cough Syrup A,SYRUP,Hydroxyethylcellulose,Thickener,CC995ZMV90,T4V6TWG28D
+F12,Ambroxol HCl Cough Syrup A,SYRUP,Sucralose,Sweetener,CC995ZMV90,96K6UQ3ZD4
+F12,Ambroxol HCl Cough Syrup A,SYRUP,Water,Solvent,CC995ZMV90,059QF0KO0R

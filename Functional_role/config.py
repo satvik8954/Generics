@@ -8,9 +8,8 @@ Task B (formulation-level excipient role assignment) pipeline.
 # ─────────────────────────────────────────────
 \
 
-FUNCTIONAL_CSV = "Data/functional_categories_excipients_FILLED_1.csv"
-UNII_CSV       = "Data/excipients_by_unii.csv"
-ORAL_CSV       = "Data/oral_only.csv"
+FUNCTIONAL_CSV = "data/functional_categories_excipients_EXTENDED_with_unii.csv"
+ORAL_CSV       = "data/oral_formulations_final.csv"
 
 OUTPUT_DIR          = "outputs"
 PICKLE_PATH         = "weak_role_labels.pkl"
@@ -19,7 +18,7 @@ PASS2_CSV_PATH      = f"{OUTPUT_DIR}/weak_labels_pass2.csv"
 MODEL_PATH          = f"{OUTPUT_DIR}/task_b_model.pkl"
 
 # Precomputed RDKit descriptors per API, keyed by api_unii
-API_FEATURES_CSV = "Data/api_features.csv"
+API_FEATURES_CSV = "data/api_features.csv"
 API_FEATURE_COLS = [
     "MolWt", "MolLogP", "TPSA", "NumHDonors", "NumHAcceptors",
     "NumRotatableBonds", "NumAromaticRings", "NumAliphaticRings", "RingCount",
@@ -96,10 +95,18 @@ EXCLUSIVE_ROLES = {
 ROLE_CAPACITY = {role: 1 for role in EXCLUSIVE_ROLES}
 ROLE_CAPACITY["lubricant"] = 2
 ROLE_CAPACITY["glidant"] = 2
+ROLE_CAPACITY["solvent"] = 2  # e.g. water + ethanol in a hydroalcoholic solution
 
 # minimum Pass 1 occurrences required before trusting an excipient-specific
 # prior over the global fallback prior (see weak_labels.py estimate_priors)
 MIN_UNII_COUNT = 5
+
+# for the Level 2 "unii, all buckets combined" prior in estimate_priors():
+# a bucket only counts as real cross-context evidence if it has at least
+# this many Pass-1 samples for the excipient. Without this, a single fluke
+# sample landing in a second bucket would be enough to satisfy the
+# 2-distinct-buckets diversity check and wrongly unlock Level 2.
+MIN_SAMPLES_PER_BUCKET_FOR_DIVERSITY = 2
 
 # roles that are commonly tagged as a SECONDARY/loose HPE category for many
 # excipients (e.g. lots of binders also get "granulation aid" listed) and
